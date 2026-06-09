@@ -6,24 +6,13 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#1D9E75">
 <title>CK発注システム - たくあんグループ</title>
-<!--
-  ★ Supabase設定 ★
-  以下の2行にご自身のURLとAnon Keyを入れると、
-  設定画面をスキップして直接ログイン画面が表示されます。
-
-  const SUPABASE_URL      = 'https://dlkilajbabzbmbpratnq.supabase.co';
-  const SUPABASE_ANON_KEY = 'ここにAnon Keyを貼る';
--->
 <script>
-// ★ ここを書き換えてください ★
+// ★ Supabase接続情報をここに入力してください ★
 const SUPABASE_URL      = 'https://dlkilajbabzbmbpratnq.supabase.co';
-const SUPABASE_ANON_KEY = ''; // ← あなたのAnon Keyをここに貼る
-
-// Supabase JS を同期ロード（CDN）
-// jsdelivr と unpkg の両方を用意してフェイルオーバー
+const SUPABASE_ANON_KEY = ''; // ← anon public key を貼る
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"
-        onerror="this.remove();document.head.insertAdjacentHTML('beforeend','<script src=https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js><\/script>')">
+  onerror="this.remove();var s=document.createElement('script');s.src='https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js';document.head.appendChild(s)">
 </script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
 <style>
@@ -31,7 +20,7 @@ const SUPABASE_ANON_KEY = ''; // ← あなたのAnon Keyをここに貼る
 :root{
   --g:#1D9E75;--gd:#0F6E56;--gl:#E1F5EE;--gm:#9FE1CB;
   --b:#378ADD;--bl:#E6F1FB;--bd:#042C53;
-  --r:#E24B4A;--rl:#FCEBEB;
+  --rd:#E24B4A;--rl:#FCEBEB;
   --o:#EF9F27;--ol:#FAEEDA;--od:#633806;
   --gr:#888780;--grl:#F1EFE8;--grd:#444441;
   --t:#2C2C2A;--m:#5F5E5A;--h:#B4B2A9;
@@ -41,502 +30,357 @@ const SUPABASE_ANON_KEY = ''; // ← あなたのAnon Keyをここに貼る
 }
 html{height:100%;-webkit-text-size-adjust:100%}
 body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic UI',sans-serif;
-  background:#EDE9E3;color:var(--t);min-height:100vh;font-size:16px;line-height:1.5;
-  -webkit-font-smoothing:antialiased}
-
-/* SHELL */
-.app{display:flex;flex-direction:column;min-height:100vh;max-width:520px;margin:0 auto;
-  background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.06)}
-.bar{background:#fff;border-bottom:1px solid var(--br);padding:12px 16px;
-  display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100}
+  background:#EDE9E3;color:var(--t);min-height:100vh;font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.app{display:flex;flex-direction:column;min-height:100vh;max-width:520px;margin:0 auto;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.06)}
+.bar{background:#fff;border-bottom:1px solid var(--br);padding:12px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100}
 .bar-t{font-size:17px;font-weight:600;flex:1;line-height:1.2}
 .bar-s{font-size:12px;color:var(--m);margin-top:1px}
 .con{flex:1;padding-bottom:calc(72px + var(--sb))}
-.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:520px;
-  background:#fff;border-top:1px solid var(--br);display:flex;z-index:100;
-  padding-bottom:var(--sb)}
-.nb{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px;
-  cursor:pointer;color:var(--h);font-size:11px;border:none;background:none;
-  min-height:56px;justify-content:center;transition:color .15s}
+.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:520px;background:#fff;border-top:1px solid var(--br);display:flex;z-index:100;padding-bottom:var(--sb)}
+.nb{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px;cursor:pointer;color:var(--h);font-size:11px;border:none;background:none;min-height:56px;justify-content:center}
 .nb.on{color:var(--g)}
 .nb i{font-size:24px}
-
-/* SETUP */
-.setup{display:flex;flex-direction:column;align-items:center;min-height:100vh;
-  padding:36px 20px 32px;background:linear-gradient(160deg,#FAEEDA 0%,#EDE9E3 50%)}
-.sc{background:#fff;border-radius:var(--R);border:1px solid var(--br);
-  padding:22px;width:100%;max-width:420px}
-.tx{width:100%;padding:12px 14px;border:1.5px solid var(--br);border-radius:var(--r8);
-  font-size:14px;color:var(--t);background:#fff;outline:none;margin-bottom:10px;
-  font-family:monospace;transition:border-color .15s;
-  -webkit-appearance:none;word-break:break-all}
-.tx:focus{border-color:var(--g)}
-.cbox{border-radius:var(--r8);padding:12px 14px;display:flex;gap:9px;
-  align-items:flex-start;border:1px solid;font-size:13px;margin-bottom:10px;
-  line-height:1.7;word-break:break-word}
-.cbox i{flex-shrink:0;font-size:18px;margin-top:2px}
-.c-ok{background:var(--gl);color:var(--gd);border-color:var(--gm)}
-.c-w{background:var(--ol);color:var(--od);border-color:#FAC775}
-.c-e{background:var(--rl);color:#791F1F;border-color:#F7C1C1}
-.c-i{background:var(--bl);color:var(--bd);border-color:#B5D4F4}
-
 /* LOGIN */
-.lp{display:flex;flex-direction:column;align-items:center;min-height:100vh;
-  padding:48px 20px 32px;background:linear-gradient(160deg,var(--gl) 0%,#EDE9E3 50%)}
-.logo{width:80px;height:80px;background:var(--g);border-radius:22px;
-  display:flex;align-items:center;justify-content:center;margin-bottom:20px}
+.lp{display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:48px 20px 32px;background:linear-gradient(160deg,var(--gl) 0%,#EDE9E3 50%)}
+.logo{width:80px;height:80px;background:var(--g);border-radius:22px;display:flex;align-items:center;justify-content:center;margin-bottom:20px}
 .logo i{font-size:44px;color:#fff}
-.lc{background:#fff;border-radius:var(--R);border:1px solid var(--br);
-  padding:20px;width:100%;max-width:380px}
-.sl{font-size:12px;font-weight:600;color:var(--m);text-transform:uppercase;
-  letter-spacing:.6px;margin-bottom:10px;display:block}
-.rb{width:100%;padding:14px;border:1.5px solid var(--br);border-radius:var(--r8);
-  cursor:pointer;background:#fff;text-align:left;margin-bottom:10px;
-  display:flex;align-items:center;gap:14px;transition:all .15s;-webkit-appearance:none}
-.rb.sel{border-color:var(--g);background:var(--gl)}
-.ri{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;
-  justify-content:center;font-size:22px;flex-shrink:0}
-.fsel{width:100%;padding:14px;border:1.5px solid var(--br);border-radius:var(--r8);
-  font-size:16px;color:var(--t);background:#fff;outline:none;
-  -webkit-appearance:none;appearance:none;margin-bottom:14px;cursor:pointer;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23888780' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-  background-repeat:no-repeat;background-position:right 14px center;padding-right:40px}
-
+.lcard{background:#fff;border-radius:var(--R);border:1px solid var(--br);padding:20px;width:100%;max-width:380px}
+.sl{font-size:12px;font-weight:600;color:var(--m);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;display:block}
+.rbtn{width:100%;padding:14px;border:1.5px solid var(--br);border-radius:var(--r8);cursor:pointer;background:#fff;text-align:left;margin-bottom:10px;display:flex;align-items:center;gap:14px;transition:all .15s;-webkit-appearance:none}
+.rbtn.sel{border-color:var(--g);background:var(--gl)}
+.ri{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.fsel{width:100%;padding:13px 40px 13px 14px;border:1.5px solid var(--br);border-radius:var(--r8);font-size:15px;color:var(--t);background:#fff;outline:none;-webkit-appearance:none;appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23888780' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+.fsel:focus{border-color:var(--g)}
+/* SETUP */
+.setup{display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:36px 20px;background:linear-gradient(160deg,var(--ol) 0%,#EDE9E3 50%)}
+.scard{background:#fff;border-radius:var(--R);border:1px solid var(--br);padding:22px;width:100%;max-width:420px}
+.stx{width:100%;padding:12px 14px;border:1.5px solid var(--br);border-radius:var(--r8);font-size:14px;color:var(--t);background:#fff;outline:none;margin-bottom:10px;font-family:monospace;-webkit-appearance:none}
+.stx:focus{border-color:var(--g)}
+.cbox{border-radius:var(--r8);padding:11px 14px;display:flex;gap:9px;align-items:flex-start;border:1px solid;font-size:13px;margin-bottom:10px;line-height:1.7;word-break:break-word}
+.cbox i{flex-shrink:0;font-size:18px;margin-top:1px}
+.cok{background:var(--gl);color:var(--gd);border-color:var(--gm)}
+.cwn{background:var(--ol);color:var(--od);border-color:#FAC775}
+.cer{background:var(--rl);color:#791F1F;border-color:#F7C1C1}
+.cif{background:var(--bl);color:var(--bd);border-color:#B5D4F4}
 /* BUTTONS */
-.btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:15px 20px;
-  border-radius:var(--r8);font-size:16px;font-weight:600;cursor:pointer;border:none;
-  width:100%;transition:all .15s;line-height:1;-webkit-appearance:none;user-select:none}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:15px 20px;border-radius:var(--r8);font-size:16px;font-weight:600;cursor:pointer;border:none;width:100%;-webkit-appearance:none;user-select:none}
 .btn:active{transform:scale(.98)}
 .bg{background:var(--g);color:#fff}.bg:active{background:var(--gd)}
 .bg:disabled{opacity:.4;transform:none;cursor:not-allowed;pointer-events:none}
 .bo{background:#fff;color:var(--g);border:1.5px solid var(--g)}.bo:active{background:var(--gl)}
 .bgy{background:#fff;color:var(--m);border:1.5px solid var(--br)}.bgy:active{background:var(--sf)}
 .bb{background:#fff;color:var(--b);border:1.5px solid var(--b)}.bb:active{background:var(--bl)}
+.brd{background:var(--rd);color:#fff}.brd:active{opacity:.85}
 .bsm{padding:9px 13px;font-size:13px;width:auto;border-radius:6px;font-weight:500}
-
 /* LOADING */
-.lov{position:fixed;inset:0;background:rgba(255,255,255,.9);z-index:500;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
-.sp{width:36px;height:36px;border:3px solid var(--gl);border-top-color:var(--g);
-  border-radius:50%;animation:spin .7s linear infinite}
-.spsm{width:18px;height:18px;border-width:2px;flex-shrink:0}
+.lov{position:fixed;inset:0;background:rgba(255,255,255,.9);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+.sp{width:36px;height:36px;border:3px solid var(--gl);border-top-color:var(--g);border-radius:50%;animation:spin .7s linear infinite}
+.spsm{width:18px;height:18px;border-width:2px}
 @keyframes spin{to{transform:rotate(360deg)}}
-
 /* CARDS */
-.card{background:#fff;border-radius:var(--R);border:1px solid var(--br);
-  margin:10px 12px;overflow:hidden}
+.card{background:#fff;border-radius:var(--R);border:1px solid var(--br);margin:10px 12px;overflow:hidden}
 .ch{padding:14px 16px;border-bottom:1px solid var(--br);display:flex;align-items:center;gap:10px}
 .ct{font-size:15px;font-weight:600;flex:1}
-.sl2{font-size:12px;font-weight:600;color:var(--m);text-transform:uppercase;
-  letter-spacing:.6px;padding:14px 16px 4px}
-
+.sl2{font-size:12px;font-weight:600;color:var(--m);text-transform:uppercase;letter-spacing:.6px;padding:14px 16px 4px}
 /* BADGES */
-.bdg{display:inline-flex;align-items:center;gap:4px;border-radius:20px;
-  padding:4px 10px;font-size:12px;font-weight:600;white-space:nowrap}
-.bok{background:var(--gl);color:var(--gd)}
-.bnone{background:var(--bl);color:var(--bd)}
-.bunc{background:var(--grl);color:var(--grd)}
-.blate{background:var(--ol);color:var(--od)}
-.bck{background:#E6F1FB;color:#0C447C}
-.bship{background:#EAF3DE;color:#173404}
-
+.bdg{display:inline-flex;align-items:center;gap:4px;border-radius:20px;padding:4px 10px;font-size:12px;font-weight:600;white-space:nowrap}
+.bok{background:var(--gl);color:var(--gd)}.bnone{background:var(--bl);color:var(--bd)}
+.bunc{background:var(--grl);color:var(--grd)}.blate{background:var(--ol);color:var(--od)}
+.bck{background:#E6F1FB;color:#0C447C}.bship{background:#EAF3DE;color:#173404}
+.binact{background:#F7C1C1;color:#791F1F}
 /* ALERTS */
-.al{border-radius:var(--r8);padding:12px 14px;display:flex;gap:9px;
-  margin:8px 12px;font-size:14px;align-items:flex-start;border:1px solid}
+.al{border-radius:var(--r8);padding:12px 14px;display:flex;gap:9px;margin:8px 12px;font-size:14px;align-items:flex-start;border:1px solid}
 .al i{font-size:18px;flex-shrink:0;margin-top:1px}
 .aok{background:var(--gl);color:var(--gd);border-color:var(--gm)}
 .aw{background:var(--ol);color:var(--od);border-color:#FAC775}
 .ai{background:var(--bl);color:var(--bd);border-color:#B5D4F4}
 .ae{background:var(--rl);color:#791F1F;border-color:#F7C1C1}
 .agr{background:var(--grl);color:var(--grd);border-color:var(--br)}
-
 /* STATUS */
-.sbar{margin:0 12px 12px;padding:16px;background:var(--sf);
-  border-radius:var(--r8);display:flex;align-items:center;gap:12px;border:1px solid var(--br)}
+.sbar{margin:0 12px 12px;padding:16px;background:var(--sf);border-radius:var(--r8);display:flex;align-items:center;gap:12px;border:1px solid var(--br)}
 .dot{width:14px;height:14px;border-radius:50%;flex-shrink:0}
-.st{font-size:15px;font-weight:600;flex:1}
-.ss{font-size:12px;color:var(--m);margin-top:2px}
-
-/* STORE ROW */
-.sr{display:flex;align-items:center;gap:12px;padding:14px 16px;
-  border-bottom:1px solid var(--br);cursor:pointer;transition:background .1s}
-.sr:last-child{border-bottom:none}
-.sr:active{background:var(--sf)}
-.sd{width:10px;height:10px;border-radius:50%;flex-shrink:0}
-
 /* PRODUCTS */
-.cath{padding:10px 16px;background:var(--sf);display:flex;align-items:center;
-  gap:8px;cursor:pointer;user-select:none;border-bottom:1px solid var(--br);min-height:48px}
+.cath{padding:10px 16px;background:var(--sf);display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;border-bottom:1px solid var(--br);min-height:48px}
 .catf{font-size:13px;font-weight:600;color:var(--m);text-transform:uppercase;letter-spacing:.5px;flex:1}
-.catv{font-size:12px;color:var(--g);font-weight:600}
 .pi{padding:13px 16px;border-bottom:1px solid var(--br);display:flex;align-items:center;gap:10px}
 .pi:last-child{border-bottom:none}
 .pi.f{background:#FAFFFD}
 .pn{font-size:15px;font-weight:500}
 .pu{font-size:12px;color:var(--h);margin-top:3px}
 .qc{display:flex;align-items:center;border:1.5px solid var(--br);border-radius:var(--r8);overflow:hidden;flex-shrink:0}
-.qb{width:48px;height:48px;border:none;background:var(--sf);font-size:22px;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;color:var(--m);-webkit-appearance:none}
+.qb{width:48px;height:48px;border:none;background:var(--sf);font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--m);-webkit-appearance:none}
 .qb:active{background:var(--br)}
 .qb.p{color:var(--g);background:var(--gl)}.qb.p:active{background:var(--gm)}
-.qi{border:none;text-align:center;font-size:17px;font-weight:600;width:56px;
-  padding:0;background:#fff;color:var(--t);outline:none;-moz-appearance:textfield}
+.qi{border:none;text-align:center;font-size:17px;font-weight:600;width:56px;padding:0;background:#fff;color:var(--t);outline:none;-moz-appearance:textfield}
 .qi::-webkit-inner-spin-button,.qi::-webkit-outer-spin-button{-webkit-appearance:none}
-
 /* TABS */
-.tabs{display:flex;border-bottom:1px solid var(--br);background:#fff;
-  position:sticky;top:64px;z-index:50}
-.tab{flex:1;padding:12px 4px;text-align:center;font-size:13px;font-weight:600;
-  color:var(--h);cursor:pointer;border-bottom:2.5px solid transparent}
+.tabs{display:flex;border-bottom:1px solid var(--br);background:#fff;position:sticky;top:64px;z-index:50}
+.tab{flex:1;padding:12px 4px;text-align:center;font-size:13px;font-weight:600;color:var(--h);cursor:pointer;border-bottom:2.5px solid transparent}
 .tab.on{color:var(--g);border-bottom-color:var(--g)}
-
 /* FORM */
 .fg{padding:0 12px;margin-bottom:12px}
-.fl{font-size:13px;font-weight:600;color:var(--m);margin-bottom:7px;display:block}
-.fi{width:100%;padding:13px 14px;border:1.5px solid var(--br);border-radius:var(--r8);
-  font-size:16px;color:var(--t);background:#fff;outline:none;-webkit-appearance:none}
+.fl{font-size:13px;font-weight:600;color:var(--m);margin-bottom:6px;display:block}
+.fi{width:100%;padding:12px 14px;border:1.5px solid var(--br);border-radius:var(--r8);font-size:15px;color:var(--t);background:#fff;outline:none;-webkit-appearance:none}
 .fi:focus{border-color:var(--g)}
-textarea.fi{resize:none;font-family:inherit}
-
-/* CHECK */
-.ckr{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--br)}
-.ckr:last-child{border-bottom:none}
-.cb{width:30px;height:30px;border-radius:6px;border:2px solid var(--br);
-  display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.cb.on{background:var(--g);border-color:var(--g);color:#fff}
-
+textarea.fi{resize:none;font-family:inherit;min-height:72px}
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:flex;align-items:flex-end}
+.modal{background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:520px;margin:0 auto;max-height:92vh;overflow-y:auto;padding-bottom:calc(20px + var(--sb));animation:su .22s ease}
+@keyframes su{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.mh{padding:16px;display:flex;align-items:center;border-bottom:1px solid var(--br);position:sticky;top:0;background:#fff;z-index:10}
+.mt{font-size:18px;font-weight:600;flex:1}
+.xcl{border:none;background:none;font-size:26px;color:var(--h);cursor:pointer;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:50%}
 /* SUMMARY */
 .ro{display:flex;align-items:center;padding:11px 16px;border-bottom:1px solid var(--br);gap:10px}
 .ro:last-child{border-bottom:none}
 .rn{flex:1;font-size:15px}
 .rq{font-size:15px;font-weight:600;color:var(--g);white-space:nowrap}
-
 /* STATS */
 .sg{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:12px 12px 4px}
 .sc2{background:var(--sf);border-radius:var(--r8);padding:13px 14px;border:1px solid var(--br)}
 .sl3{font-size:12px;color:var(--m);margin-bottom:4px;font-weight:500}
 .sv{font-size:24px;font-weight:700}
-
-/* SHEET */
-.ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:flex-end}
-.sh{background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:520px;
-  margin:0 auto;max-height:90vh;overflow-y:auto;
-  padding-bottom:calc(24px + var(--sb));animation:su .22s ease}
-@keyframes su{from{transform:translateY(100%)}to{transform:translateY(0)}}
-.shh{padding:16px;display:flex;align-items:center;border-bottom:1px solid var(--br);
-  position:sticky;top:0;background:#fff;z-index:10}
-.sht{font-size:18px;font-weight:600;flex:1}
-.xcl{border:none;background:none;font-size:26px;color:var(--h);cursor:pointer;
-  width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:50%}
-
 /* SUCCESS */
 .sw{display:flex;flex-direction:column;align-items:center;padding:48px 24px 32px;text-align:center}
 .si{width:88px;height:88px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:20px}
 .sh2{font-size:24px;font-weight:700;margin-bottom:8px}
-
 /* TOAST */
-.toast{position:fixed;bottom:calc(88px + var(--sb));left:50%;transform:translateX(-50%);
-  background:#2C2C2A;color:#fff;padding:10px 20px;border-radius:20px;font-size:14px;
-  font-weight:500;z-index:300;pointer-events:none;opacity:0;transition:opacity .3s;
-  max-width:90vw;text-align:center}
+.toast{position:fixed;bottom:calc(88px + var(--sb));left:50%;transform:translateX(-50%);background:#2C2C2A;color:#fff;padding:10px 20px;border-radius:20px;font-size:14px;font-weight:500;z-index:400;pointer-events:none;opacity:0;transition:opacity .3s;max-width:90vw;text-align:center}
 .toast.on{opacity:1}
-
-.rdot{width:8px;height:8px;border-radius:50%;background:var(--g);display:inline-block;
-  margin-right:4px;animation:pulse 2s infinite}
+.rdot{width:8px;height:8px;border-radius:50%;background:var(--g);display:inline-block;margin-right:4px;animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-
+/* STORE ROW */
+.sr{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--br);cursor:pointer}
+.sr:last-child{border-bottom:none}
+.sr:active{background:var(--sf)}
+.sd{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+/* CHECK */
+.ckr{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--br)}
+.ckr:last-child{border-bottom:none}
+.cb{width:30px;height:30px;border-radius:6px;border:2px solid var(--br);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.cb.on{background:var(--g);border-color:var(--g);color:#fff}
+/* UTILS */
 .mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}
 .px12{padding:0 12px}.fc{display:flex;flex-direction:column}.g8{gap:8px}.g10{gap:10px}
 .emp{padding:40px 24px;text-align:center;color:var(--m);font-size:14px}
-
 @media(min-width:560px){
   body{background:#d8d4ce}
   .app{margin:24px auto;border-radius:16px;min-height:calc(100vh - 48px)}
   .nav{border-radius:0 0 16px 16px;left:auto;transform:none;position:sticky;bottom:0}
   .con{max-height:calc(100vh - 160px);overflow-y:auto}
-  .tabs{top:66px}
 }
 </style>
 </head>
 <body>
 <div id="root"></div>
 <div class="toast" id="toast"></div>
-
 <script>
 'use strict';
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   フォールバックデータ（Supabase未接続時）
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-const LS = [
-  {id:1,name:'うどん屋たくあん',  short_name:'うどん屋',   deadline_time:'10:00',manager_name:'店長A'},
-  {id:2,name:'お弁当たくあん',    short_name:'お弁当',     deadline_time:'10:00',manager_name:'店長B'},
-  {id:3,name:'幸せや坂戸店',      short_name:'幸せや坂戸', deadline_time:'09:30',manager_name:'店長C'},
-  {id:4,name:'幸せや今渡店',      short_name:'幸せや今渡', deadline_time:'09:30',manager_name:'店長D'},
-  {id:5,name:'幸せや則武店',      short_name:'幸せや則武', deadline_time:'10:00',manager_name:'店長E'},
-  {id:6,name:'アーラ店',          short_name:'アーラ',     deadline_time:'10:00',manager_name:'店長F'},
+/* ══════════════════════════════════════════
+   フォールバック用マスターデータ
+══════════════════════════════════════════ */
+const DEFAULT_STORES=[
+  {id:1,name:'うどん屋たくあん',short_name:'うどん屋',deadline_time:'10:00',manager_name:'店長A',is_active:true},
+  {id:2,name:'お弁当たくあん',  short_name:'お弁当',  deadline_time:'10:00',manager_name:'店長B',is_active:true},
+  {id:3,name:'幸せや坂戸店',    short_name:'幸せや坂戸',deadline_time:'09:30',manager_name:'店長C',is_active:true},
+  {id:4,name:'幸せや今渡店',    short_name:'幸せや今渡',deadline_time:'09:30',manager_name:'店長D',is_active:true},
+  {id:5,name:'幸せや則武店',    short_name:'幸せや則武',deadline_time:'10:00',manager_name:'店長E',is_active:true},
+  {id:6,name:'アーラ店',        short_name:'アーラ',  deadline_time:'10:00',manager_name:'店長F',is_active:true},
 ];
-const LC = [
-  {id:'meat',  name:'肉類',        icon:'ti-meat'},
-  {id:'veg',   name:'野菜・果物',  icon:'ti-plant'},
-  {id:'rice',  name:'米・ご飯類',  icon:'ti-bowl-spoon'},
-  {id:'frozen',name:'冷凍品',      icon:'ti-snowflake'},
-  {id:'sauce', name:'調味料',      icon:'ti-bottle'},
-  {id:'supply',name:'備品・消耗品',icon:'ti-tool'},
+const DEFAULT_CATS=[
+  {id:1,name:'肉類',display_order:10,is_active:true},
+  {id:2,name:'魚介類',display_order:20,is_active:true},
+  {id:3,name:'野菜',display_order:30,is_active:true},
+  {id:4,name:'米・ご飯類',display_order:40,is_active:true},
+  {id:5,name:'麺類',display_order:50,is_active:true},
+  {id:6,name:'だし・スープ',display_order:60,is_active:true},
+  {id:7,name:'調味料',display_order:70,is_active:true},
+  {id:8,name:'冷凍品',display_order:80,is_active:true},
+  {id:9,name:'冷蔵品',display_order:90,is_active:true},
+  {id:10,name:'乾物',display_order:100,is_active:true},
+  {id:11,name:'容器',display_order:110,is_active:true},
+  {id:12,name:'箸・袋',display_order:120,is_active:true},
+  {id:13,name:'備品',display_order:130,is_active:true},
+  {id:14,name:'消耗品',display_order:140,is_active:true},
+  {id:15,name:'その他',display_order:150,is_active:true},
 ];
-const LP = [
-  {id:1, name:'ヒレカツ肉',           category:'meat',  unit:'kg', min_qty:0.5,is_frequent:true },
-  {id:2, name:'ロースカツ肉',         category:'meat',  unit:'kg', min_qty:0.5,is_frequent:true },
-  {id:3, name:'鶏もも肉',             category:'meat',  unit:'kg', min_qty:1,  is_frequent:true },
-  {id:4, name:'豚バラ肉',             category:'meat',  unit:'kg', min_qty:0.5,is_frequent:false},
-  {id:5, name:'キャベツ',             category:'veg',   unit:'玉', min_qty:1,  is_frequent:true },
-  {id:6, name:'レタス',               category:'veg',   unit:'玉', min_qty:1,  is_frequent:true },
-  {id:7, name:'玉ねぎ',               category:'veg',   unit:'個', min_qty:5,  is_frequent:true },
-  {id:8, name:'トマト',               category:'veg',   unit:'個', min_qty:5,  is_frequent:false},
-  {id:9, name:'白米',                 category:'rice',  unit:'kg', min_qty:1,  is_frequent:true },
-  {id:10,name:'パン粉',               category:'rice',  unit:'袋', min_qty:1,  is_frequent:true },
-  {id:11,name:'エビフライ（冷凍）',   category:'frozen',unit:'袋', min_qty:1,  is_frequent:true },
-  {id:12,name:'コーンフライ（冷凍）', category:'frozen',unit:'袋', min_qty:1,  is_frequent:false},
-  {id:13,name:'醤油',                 category:'sauce', unit:'本', min_qty:1,  is_frequent:true },
-  {id:14,name:'ソース',               category:'sauce', unit:'本', min_qty:1,  is_frequent:true },
-  {id:15,name:'油',                   category:'sauce', unit:'缶', min_qty:1,  is_frequent:true },
-  {id:16,name:'割り箸',               category:'supply',unit:'袋', min_qty:1,  is_frequent:true },
-  {id:17,name:'テイクアウト容器（M）',category:'supply',unit:'個', min_qty:10, is_frequent:true },
-  {id:18,name:'手袋（S）',            category:'supply',unit:'箱', min_qty:1,  is_frequent:false},
+const DEFAULT_PRODUCTS=[
+  {id:1,name:'ヒレカツ肉',  category_id:1,category_name:'肉類',  unit:'kg', min_qty:0.5,is_frequent:true, is_active:true,display_order:10,memo:''},
+  {id:2,name:'ロースカツ肉',category_id:1,category_name:'肉類',  unit:'kg', min_qty:0.5,is_frequent:true, is_active:true,display_order:20,memo:''},
+  {id:3,name:'鶏もも肉',    category_id:1,category_name:'肉類',  unit:'kg', min_qty:1,  is_frequent:true, is_active:true,display_order:30,memo:''},
+  {id:4,name:'豚バラ肉',    category_id:1,category_name:'肉類',  unit:'kg', min_qty:0.5,is_frequent:false,is_active:true,display_order:40,memo:''},
+  {id:5,name:'キャベツ',    category_id:3,category_name:'野菜',  unit:'玉', min_qty:1,  is_frequent:true, is_active:true,display_order:10,memo:''},
+  {id:6,name:'レタス',      category_id:3,category_name:'野菜',  unit:'玉', min_qty:1,  is_frequent:true, is_active:true,display_order:20,memo:''},
+  {id:7,name:'玉ねぎ',      category_id:3,category_name:'野菜',  unit:'個', min_qty:5,  is_frequent:true, is_active:true,display_order:30,memo:''},
+  {id:8,name:'白米',        category_id:4,category_name:'米・ご飯類',unit:'kg',min_qty:1,is_frequent:true,is_active:true,display_order:10,memo:''},
+  {id:9,name:'パン粉',      category_id:4,category_name:'米・ご飯類',unit:'袋',min_qty:1,is_frequent:true,is_active:true,display_order:20,memo:''},
+  {id:10,name:'うどん（冷凍）',category_id:8,category_name:'冷凍品',unit:'袋',min_qty:1,is_frequent:true,is_active:true,display_order:10,memo:''},
+  {id:11,name:'エビフライ（冷凍）',category_id:8,category_name:'冷凍品',unit:'袋',min_qty:1,is_frequent:true,is_active:true,display_order:20,memo:''},
+  {id:12,name:'醤油',       category_id:7,category_name:'調味料',unit:'本', min_qty:1,  is_frequent:true, is_active:true,display_order:10,memo:''},
+  {id:13,name:'ソース',     category_id:7,category_name:'調味料',unit:'本', min_qty:1,  is_frequent:true, is_active:true,display_order:20,memo:''},
+  {id:14,name:'油',         category_id:7,category_name:'調味料',unit:'缶', min_qty:1,  is_frequent:true, is_active:true,display_order:30,memo:''},
+  {id:15,name:'割り箸',     category_id:12,category_name:'箸・袋',unit:'袋',min_qty:1,  is_frequent:true, is_active:true,display_order:10,memo:''},
+  {id:16,name:'テイクアウト容器（M）',category_id:11,category_name:'容器',unit:'個',min_qty:10,is_frequent:true,is_active:true,display_order:10,memo:''},
+  {id:17,name:'手袋（S）',  category_id:14,category_name:'消耗品',unit:'箱',min_qty:1,  is_frequent:false,is_active:true,display_order:10,memo:''},
 ];
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+/* ══════════════════════════════════════════
    グローバル変数
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-let SB = null;           // Supabase createClient の返り値
-let isReady = false;     // Supabase接続成功フラグ
-let STORES   = [...LS];
-let PRODUCTS = [...LP];
-const CATS = LC;
-let autoTimer = null;
-let dateTimer = null;
+══════════════════════════════════════════ */
+let SB         = null;
+let isReady    = false;
+let STORES     = [...DEFAULT_STORES];
+let CATS       = [...DEFAULT_CATS];
+let PRODUCTS   = [...DEFAULT_PRODUCTS];
+let PSV        = {};  // {product_id: [store_id,...]} 表示店舗マップ
+let autoTimer  = null;
+let dateTimer  = null;
+let realtimeCh = null;
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+/* ══════════════════════════════════════════
    日本時間ユーティリティ
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-function getJST() {
-  const p = new Intl.DateTimeFormat('ja-JP',{
-    timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit'
-  }).formatToParts(new Date());
-  return {
-    iso: `${p.find(x=>x.type==='year').value}-${p.find(x=>x.type==='month').value}-${p.find(x=>x.type==='day').value}`,
-    get disp() {
-      const [y,m,d]=this.iso.split('-').map(Number);
-      const w=new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',weekday:'short'}).format(new Date(y,m-1,d));
-      return `${y}年${m}月${d}日（${w}）`;
-    }
-  };
+══════════════════════════════════════════ */
+function getJST(){
+  const p=new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+  const iso=`${p.find(x=>x.type==='year').value}-${p.find(x=>x.type==='month').value}-${p.find(x=>x.type==='day').value}`;
+  const [y,mo,d]=iso.split('-').map(Number);
+  const w=new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',weekday:'short'}).format(new Date(y,mo-1,d));
+  return{iso,disp:`${y}年${mo}月${d}日（${w}）`};
 }
-let jst = getJST();
+let jst=getJST();
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   URL正規化
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-function cleanUrl(raw) {
-  return (raw||'').trim()
-    .replace(/\r?\n/g,'')         // 改行除去
-    .replace(/\s/g,'')            // 空白除去
-    .replace(/\/rest\/v1.*$/,'')  // /rest/v1以降を除去
-    .replace(/\/+$/,'')           // 末尾スラッシュ除去
-    .replace(/^http:\/\//,'https://') // https化
-    .replace(/^(?!https?:\/\/)/,'https://'); // スキーム補完
+function cleanUrl(raw){
+  return(raw||'').trim().replace(/\r?\n|\s/g,'').replace(/\/rest\/v1.*$/,'').replace(/\/+$/,'').replace(/^http:\/\//,'https://').replace(/^(?!https?:\/\/)/,'https://');
 }
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   エラーメッセージ → 日本語
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-function jp(e) {
-  const msg = String((e&&(e.message||e.hint||e.details||e.error_description))||'');
-  if (!msg) return '原因不明のエラーが発生しました。コンソールをご確認ください。';
-
-  if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('fetch'))
-    return [
-      '通信エラー（Failed to fetch）',
-      '',
-      '【よくある原因と対処法】',
-      '① ローカル/プレビューで開いている',
-      '　→ Vercelで公開したURLで開いてください',
-      '　　（localhost やファイルパスでは接続できません）',
-      '',
-      '② URLが間違っている',
-      '　→ Supabase > Settings > API の',
-      '　　「Project URL」を正確にコピーしてください',
-      '　→ 正しい形式: https://xxxxx.supabase.co',
-      '',
-      '③ ネットワーク問題',
-      '　→ Wi-Fi ↔ モバイル回線を切り替えてみてください',
-    ].join('\n');
-
-  if (msg.includes('Invalid API key') || msg.includes('401') || msg.includes('invalid_jwt'))
-    return [
-      'Anon Keyが正しくありません（401エラー）',
-      '',
-      '・Supabase > Settings > API',
-      '・「anon public」の「Copy」ボタンでコピー',
-      '・「service_role」は絶対に使わないでください',
-      '・「Legacy anon public key」でもOKです',
-    ].join('\n');
-
-  if (msg.includes('403') || msg.includes('row-level security') || msg.includes('policy'))
-    return [
-      'RLS（行レベルセキュリティ）でブロックされています（403エラー）',
-      '',
-      '解決方法:',
-      'Supabase > SQL Editor で以下を実行してください:',
-      '',
-      'CREATE POLICY "allow_all_stores" ON stores',
-      '  FOR ALL USING (true) WITH CHECK (true);',
-      '',
-      '（supabase_setup.sql を再実行すると全部まとめて設定できます）',
-    ].join('\n');
-
-  if (msg.includes('relation') || msg.includes('does not exist') || msg.includes('404'))
-    return [
-      'storesテーブルが存在しません（404エラー）',
-      '',
-      '解決方法:',
-      'Supabase > SQL Editor で supabase_setup.sql を実行してください',
-    ].join('\n');
-
-  if (msg.includes('CORS') || msg.includes('Access-Control'))
-    return [
-      'CORSエラーが発生しています',
-      '',
-      'ローカル環境（localhost）からはSupabaseに',
-      '接続できない場合があります。',
-      'Vercelで公開したURLで接続してください。',
-    ].join('\n');
-
-  return `エラーが発生しました:\n${msg}`;
+/* ══════════════════════════════════════════
+   安全なエラー文字列変換（DataCloneError対策）
+══════════════════════════════════════════ */
+function safeMsg(err){
+  if(!err)return'不明なエラー';
+  if(typeof err==='string')return err;
+  if(err instanceof Error)return err.message||String(err);
+  if(typeof err==='object'){
+    const m=err.message||err.hint||err.details||err.error_description||err.error||'';
+    if(m&&typeof m==='string')return m;
+    try{return JSON.stringify(err);}catch(_){}
+  }
+  try{return String(err);}catch(_){return'不明なエラー';}
 }
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   Supabase 初期化
-   ① window.supabase.createClient を使用
-   ② 失敗時は fetch 直接呼び出しにフォールバック
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-async function initSB(url, key) {
-  const u = cleanUrl(url);
-  const k = (key||'').trim().replace(/\r?\n/g,'').replace(/\s/g,'');
+function jp(input){
+  const msg=typeof input==='string'?input:safeMsg(input);
+  if(!msg)return'原因不明のエラーです。';
+  if(msg.includes('Failed to fetch')||msg.includes('NetworkError'))
+    return'通信エラー（Failed to fetch）\nVercelで公開したURLで開いてください。\nlocalhost/ファイルからは接続できません。';
+  if(msg.includes('401')||msg.includes('invalid_jwt')||msg.includes('Invalid API key'))
+    return'Anon Keyが正しくありません（401）\nSupabase > Settings > API の「anon public」を確認してください。';
+  if(msg.includes('403')||msg.includes('permission denied')||msg.includes('row-level security'))
+    return'RLSポリシーエラー（403）\nsupabase_v2.sql を再実行してポリシーを設定してください。';
+  if(msg.includes('does not exist')||msg.includes('relation')||msg.includes('404'))
+    return'テーブルが存在しません。\nSupabase > SQL Editor で supabase_v2.sql を実行してください。';
+  return`エラー: ${msg}`;
+}
 
-  // --- 公式クライアント ---
-  if (window.supabase && typeof window.supabase.createClient === 'function') {
-    try {
-      SB = window.supabase.createClient(u, k, {
-        auth: { persistSession: false, autoRefreshToken: false },
+/* ══════════════════════════════════════════
+   Supabase 初期化（エラーは必ず文字列で返す）
+══════════════════════════════════════════ */
+async function initSB(url,key){
+  const u=cleanUrl(url);
+  const k=(key||'').trim().replace(/\s/g,'');
+  let client;
+  try{
+    if(!window.supabase||!window.supabase.createClient)
+      return{ok:false,errorMsg:'Supabase JSライブラリが読み込まれていません。ページを再読み込みしてください。'};
+    client=window.supabase.createClient(u,k,{auth:{persistSession:false,autoRefreshToken:false}});
+  }catch(e){return{ok:false,errorMsg:'createClient失敗: '+safeMsg(e)};}
+
+  // 接続テスト（storesを1件取得）
+  let testRes;
+  try{testRes=await client.from('stores').select('id,name').limit(1);}
+  catch(e){return{ok:false,errorMsg:safeMsg(e)};}
+  if(testRes.error)return{ok:false,errorMsg:safeMsg(testRes.error)};
+
+  // マスターデータ一括取得
+  try{
+    const[sr,cr,pr]=await Promise.all([
+      client.from('stores').select('*').eq('is_active',true).order('display_order'),
+      client.from('categories').select('*').eq('is_active',true).order('display_order'),
+      client.from('products').select('*').eq('is_active',true).order('category_id').order('display_order'),
+    ]);
+    if(sr.data&&sr.data.length)STORES=sr.data;
+    if(cr.data&&cr.data.length)CATS=cr.data;
+    if(pr.data&&pr.data.length)PRODUCTS=pr.data;
+    // PSV取得
+    const psvR=await client.from('product_store_visibility').select('product_id,store_id,is_visible');
+    if(psvR.data){
+      PSV={};
+      psvR.data.filter(r=>r.is_visible).forEach(r=>{
+        if(!PSV[r.product_id])PSV[r.product_id]=[];
+        PSV[r.product_id].push(r.store_id);
       });
-      // 接続テスト
-      const { data, error } = await SB.from('stores').select('id,name').limit(1);
-      if (error) throw error;
-      // マスターデータ取得
-      const [s, p] = await Promise.all([
-        SB.from('stores').select('*').eq('is_active',true).order('display_order'),
-        SB.from('products').select('*').eq('is_active',true).order('display_order'),
-      ]);
-      if (s.data && s.data.length) STORES = s.data;
-      if (p.data && p.data.length) PRODUCTS = p.data;
-      isReady = true;
-      return { ok: true, via: 'createClient', stores: data };
-    } catch(e) {
-      SB = null; isReady = false;
-      return { ok: false, via: 'createClient', error: e };
     }
-  }
+  }catch(e){console.warn('マスター取得失敗（フォールバックデータ使用）',safeMsg(e));}
 
-  // --- フォールバック: fetch 直接 ---
-  try {
-    const res = await fetch(`${u}/rest/v1/stores?select=id,name&limit=1`, {
-      headers: { 'apikey': k, 'Authorization': `Bearer ${k}`, 'Content-Type': 'application/json' }
-    });
-    if (!res.ok) {
-      const j = await res.json().catch(()=>({}));
-      throw { message: `HTTP ${res.status}: ${j.message||j.hint||j.error||res.statusText}` };
-    }
-    const data = await res.json();
-    // フォールバッククライアントを作成
-    SB = makeFetch(u, k);
-    isReady = true;
-    return { ok: true, via: 'fetch', stores: data };
-  } catch(e) {
-    SB = null; isReady = false;
-    return { ok: false, via: 'fetch', error: e };
-  }
+  SB=client;isReady=true;
+  const names=Array.isArray(testRes.data)?testRes.data.map(s=>s.name).join('、'):'';
+  return{ok:true,storeNames:names};
 }
 
-/* フォールバック fetch クライアント（Supabase JS と同じ API 形状） */
-function makeFetch(url, key) {
-  const H = { 'apikey':key, 'Authorization':`Bearer ${key}`, 'Content-Type':'application/json', 'Prefer':'return=representation' };
-  const base = `${url}/rest/v1`;
+/* ══════════════════════════════════════════
+   設定保存
+══════════════════════════════════════════ */
+function lCfg(){try{const s=localStorage.getItem('tk_cfg2');return s?JSON.parse(s):{url:'',anonKey:''};}catch(_){return{url:'',anonKey:''};}}
+function sCfg(u,k){localStorage.setItem('tk_cfg2',JSON.stringify({url:u,anonKey:k}));}
 
-  function chain(table) {
-    let filters=[], _ord=null, _lim=null, _upd=null, _ins=null;
-    const q = {
-      select:  ()      => q,
-      eq:      (c,v)   => { filters.push(`${c}=eq.${encodeURIComponent(v)}`); return q; },
-      lt:      (c,v)   => { filters.push(`${c}=lt.${v}`); return q; },
-      gte:     (c,v)   => { filters.push(`${c}=gte.${v}`); return q; },
-      lte:     (c,v)   => { filters.push(`${c}=lte.${v}`); return q; },
-      in:      (c,vs)  => { filters.push(`${c}=in.(${vs.join(',')})`); return q; },
-      order:   (c,opt) => { _ord=`order=${c}.${(opt&&opt.ascending===false)?'desc':'asc'}`; return q; },
-      limit:   (n)     => { _lim=`limit=${n}`; return q; },
-      insert:  (d)     => { _ins=d; return q; },
-      update:  (d)     => { _upd=d; return q; },
-      then: (res, rej) => {
-        const qs=[...filters,_ord,_lim].filter(Boolean).join('&');
-        const ep=`${base}/${table}${qs?'?'+qs:''}`;
-        let method='GET', body;
-        if(_ins){ method='POST'; body=JSON.stringify(_ins); }
-        if(_upd){ method='PATCH'; body=JSON.stringify(_upd); }
-        fetch(ep,{method,headers:H,body})
-          .then(async r=>{
-            const txt=await r.text();
-            const d=txt?JSON.parse(txt):[];
-            if(!r.ok) return rej({data:null,error:{message:d.message||d.hint||r.statusText}});
-            res({data:Array.isArray(d)?d:[d],error:null});
-          })
-          .catch(e=>rej({data:null,error:{message:e.message}}));
-      }
-    };
-    return q;
-  }
-  return { from: (t) => chain(t) };
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+/* ══════════════════════════════════════════
    アプリ状態
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-let S = {
-  view:'setup', role:null, storeId:null,
-  phase:'home',
-  qty:{}, memo:'',
-  ckTab:0, catOpen:{meat:true,veg:true,rice:true,frozen:false,sauce:false,supply:false},
-  detail:null, submitting:false,
-  todayOrders:[], ckChecked:{}, showHist:false, histOrders:[],
-  adminOrders:[], adminTab:0,
-  af:{from:'',to:'',sid:'',status:'',kw:''},
+══════════════════════════════════════════ */
+let S={
+  view:'setup',         // setup|login|manager|ck|admin
+  role:null,storeId:null,
+  phase:'home',         // home|order|confirm|success|noorder_confirm|noorder_done|history
+  qty:{},memo:'',
+  catOpen:{},
+  ckTab:0,detail:null,ckChecked:{},showHist:false,histOrders:[],
+  todayOrders:[],
+  adminTab:0,adminOrders:[],
+  af:{from:'',to:'',sid:'',catId:'',status:'',kw:''},
+  submitting:false,
+  // 管理者モーダル
+  modal:null,           // null | {type:'product'|'category', data:{}}
+  // 自動接続エラー
+  bootError:'',
 };
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+/* ══════════════════════════════════════════
    ユーティリティ
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+══════════════════════════════════════════ */
 const $=id=>document.getElementById(id);
 const e=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 const SD=()=>STORES.find(s=>s.id===S.storeId);
-function fmtT(){const n=new Date();return`${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`;}
 function isLate(){const st=SD();if(!st)return false;const[h,m]=st.deadline_time.split(':').map(Number);const n=new Date();return n.getHours()*60+n.getMinutes()>=h*60+m;}
 
+// 店舗向けの商品リスト（PSVがあれば絞り込む、なければ全部）
+function productsForStore(storeId){
+  const hasPSV=Object.keys(PSV).length>0;
+  if(!hasPSV)return PRODUCTS.filter(p=>p.is_active!==false);
+  return PRODUCTS.filter(p=>{
+    if(p.is_active===false)return false;
+    const vis=PSV[p.id];
+    if(!vis||vis.length===0)return true; // PSV未設定なら全店舗に表示
+    return vis.includes(storeId);
+  });
+}
+
 function sMeta(st){
-  if(st==='ordered')      return{l:'本日発注あり',    b:'bok', d:'#1D9E75'};
-  if(st==='late')         return{l:'締切後発注',       b:'blate',d:'#EF9F27'};
-  if(st==='no_order')     return{l:'発注なし（連絡済）',b:'bnone',d:'#378ADD'};
-  if(st==='ck_confirmed') return{l:'CK確認済み',       b:'bck', d:'#378ADD'};
-  if(st==='shipped')      return{l:'出荷済み',         b:'bship',d:'#1D9E75'};
-  return                         {l:'未確認',          b:'bunc', d:'#B4B2A9'};
+  if(st==='ordered')     return{l:'本日発注あり',   b:'bok', d:'#1D9E75'};
+  if(st==='late')        return{l:'締切後発注',      b:'blate',d:'#EF9F27'};
+  if(st==='no_order')    return{l:'発注なし（連絡済）',b:'bnone',d:'#378ADD'};
+  if(st==='ck_confirmed')return{l:'CK確認済み',      b:'bck', d:'#378ADD'};
+  if(st==='shipped')     return{l:'出荷済み',        b:'bship',d:'#1D9E75'};
+  return{l:'未確認',b:'bunc',d:'#B4B2A9'};
 }
 const bdg=st=>{const m=sMeta(st);return`<span class="bdg ${m.b}">${m.l}</span>`;};
 
@@ -551,223 +395,148 @@ function showL(txt='処理中…'){
 }
 function hideL(){const el=$('_lov');if(el)el.remove();}
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   RENDER
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* ══════════════════════════════════════════
+   レンダリング
+══════════════════════════════════════════ */
 function render(){
-  $('root').innerHTML =
-    S.view==='setup'   ? vSetup()
-    :S.view==='login'  ? vLogin()
-    :S.view==='manager'? vManager()
-    :S.view==='ck'     ? vCK()
+  $('root').innerHTML=
+    S.view==='setup'  ?vSetup()
+    :S.view==='login' ?vLogin()
+    :S.view==='manager'?vManager()
+    :S.view==='ck'    ?vCK()
     :vAdmin();
+  // モーダルを最前面に追加
+  if(S.modal)renderModal();
 }
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   SETUP ページ
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* ══════════════════════════════════════════
+   SETUP
+══════════════════════════════════════════ */
 function vSetup(){
-  const sv = lCfg();
-  const hasCode = !!(SUPABASE_URL.trim() && SUPABASE_ANON_KEY.trim());
-  return `
+  const sv=lCfg();
+  return`
 <div class="setup">
   <div style="text-align:center;margin-bottom:20px">
-    <div style="width:72px;height:72px;background:var(--o);border-radius:20px;
-      display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
-      <i class="ti ti-database" style="font-size:40px;color:#fff"></i>
-    </div>
+    <div style="width:72px;height:72px;background:var(--o);border-radius:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
+      <i class="ti ti-database" style="font-size:40px;color:#fff"></i></div>
     <div style="font-size:20px;font-weight:600;margin-bottom:4px">Supabase 接続設定</div>
     <div style="font-size:13px;color:var(--m)">CK発注システム - たくあんグループ</div>
   </div>
-
-  ${hasCode?`<div class="cbox c-ok" style="max-width:420px;width:100%;margin-bottom:12px">
-    <i class="ti ti-code"></i>
-    <span>コード内にURL/Keyが設定されています。<br>
-      そのまま接続してください。<br>
-      URL: ${e(cleanUrl(SUPABASE_URL))}</span>
+  ${isReady?`<div class="cbox cok" style="max-width:420px;width:100%;margin-bottom:12px">
+    <i class="ti ti-circle-check"></i><span>現在接続済みです。設定変更時のみ以下を入力してください。</span>
+  </div>
+  <div style="max-width:420px;width:100%">
+    <button class="btn bg" onclick="S.view='login';render()" style="margin-bottom:12px">
+      <i class="ti ti-arrow-left"></i>ログイン画面に戻る
+    </button></div>`:''}
+  ${S.bootError?`<div class="cbox cer" style="max-width:420px;width:100%;margin-bottom:12px;white-space:pre-wrap">
+    <i class="ti ti-alert-circle"></i><span>自動接続失敗:\n${e(S.bootError.split('\n').slice(0,3).join('\n'))}</span>
   </div>`:''}
-
-  <div class="sc">
+  <div class="scard">
     <div style="font-size:17px;font-weight:600;margin-bottom:6px">接続情報を入力</div>
-    <div style="font-size:13px;color:var(--m);margin-bottom:16px;line-height:1.7">
-      Supabase ダッシュボード → <strong>Settings → API</strong> から<br>
-      <strong>Project URL</strong> と <strong>anon public</strong> をコピーして貼り付けてください。
+    <div style="font-size:13px;color:var(--m);margin-bottom:14px;line-height:1.7">
+      Supabase → <strong>Settings → API</strong> から<br>
+      <strong>Project URL</strong> と <strong>anon public</strong> をコピーして貼り付けてください。<br>
+      <span style="color:var(--g);font-weight:600">接続成功後、次回から自動でログイン画面が開きます。</span>
     </div>
-
-    <label class="sl">SUPABASE URL（Project URL）</label>
-    <textarea id="sb-url" class="tx" rows="2"
-      placeholder="https://xxxxx.supabase.co"
-      autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"
-      style="min-height:56px">${e(sv.url||cleanUrl(SUPABASE_URL))}</textarea>
-
-    <label class="sl">SUPABASE ANON KEY（anon public）</label>
-    <textarea id="sb-key" class="tx" rows="3"
-      placeholder="eyJhbGci..."
-      autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"
-      style="min-height:80px">${e(sv.anonKey||SUPABASE_ANON_KEY)}</textarea>
-
-    <div id="cst" style="min-height:4px">
-      ${(sv.url||SUPABASE_URL)?`<div class="cbox c-w"><i class="ti ti-clock"></i><span>未確認 — 「接続テスト」を押してください</span></div>`:''}
-    </div>
-
-    <button class="btn bo" onclick="doTest()" style="margin-bottom:10px">
-      <i class="ti ti-plug"></i>接続テスト
-    </button>
-    <button class="btn bg" id="go-btn" onclick="doStart()"
-      ${(sv.url||SUPABASE_URL)?'':'disabled'}>
+    <label class="sl">SUPABASE URL</label>
+    <textarea id="sb-url" class="stx" rows="2" placeholder="https://xxxxx.supabase.co"
+      autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">${e(sv.url||cleanUrl(SUPABASE_URL))}</textarea>
+    <label class="sl">ANON KEY（anon public）</label>
+    <textarea id="sb-key" class="stx" rows="3" placeholder="eyJhbGci..."
+      autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">${e(sv.anonKey||SUPABASE_ANON_KEY)}</textarea>
+    <div id="cst" style="min-height:4px">${(sv.url||SUPABASE_URL)?`<div class="cbox cwn"><i class="ti ti-clock"></i><span>未確認 — 「接続テスト」を押してください</span></div>`:''}</div>
+    <button class="btn bo" onclick="doTest()" style="margin-bottom:10px"><i class="ti ti-plug"></i>接続テスト</button>
+    <button class="btn bg" id="go-btn" onclick="doStart()" ${(sv.url||SUPABASE_URL)?'':'disabled'}>
       <i class="ti ti-login"></i>接続してログイン画面へ
     </button>
-
-    <div style="margin-top:16px;border-top:1px solid var(--br);padding-top:14px">
+    <div style="margin-top:14px;border-top:1px solid var(--br);padding-top:14px">
       <div style="font-size:12px;color:var(--m);margin-bottom:10px;line-height:1.8">
-        ⚠️ Supabaseを設定しないと、<br>
-        店長の発注がCK画面に届きません。<br>
-        本番運用には必ず接続してください。
+        ⚠️ Supabaseを設定しないと発注がCKに届きません<br>
+        「Failed to fetch」→ Vercel公開URLで開いてください
       </div>
       <button class="btn bgy" onclick="doDemo()" style="font-size:13px;padding:11px">
         <i class="ti ti-device-desktop"></i>デモモードで試す（端末内のみ）
       </button>
     </div>
   </div>
-
-  <div style="margin-top:16px;max-width:420px;width:100%;padding:0 4px">
-    <div style="font-size:12px;color:var(--m);line-height:1.8;background:rgba(0,0,0,.04);padding:12px;border-radius:8px">
-      <strong>「Failed to fetch」が出る場合：</strong><br>
-      → ローカルではなく <strong>Vercel公開URL</strong> で開いてください<br>
-      → localhost や file:// からは接続できません
-    </div>
-  </div>
 </div>`;
 }
 
-function lCfg(){try{const s=localStorage.getItem('tk_cfg');return s?JSON.parse(s):{url:'',anonKey:''};}catch(_){return{url:'',anonKey:''};}}
-function sCfg(u,k){localStorage.setItem('tk_cfg',JSON.stringify({url:u,anonKey:k}));}
-
-function cBox(type,msg){
-  const m={ok:{cls:'c-ok',ic:'ti-circle-check'},w:{cls:'c-w',ic:'ti-clock'},e:{cls:'c-e',ic:'ti-alert-circle'}}[type]||{cls:'c-e',ic:'ti-alert-circle'};
-  return`<div class="cbox ${m.cls}"><i class="ti ${m.ic}"></i><span style="white-space:pre-wrap">${e(msg)}</span></div>`;
+function cBox(t,msg){
+  const m={ok:{c:'cok',i:'ti-circle-check'},w:{c:'cwn',i:'ti-clock'},e:{c:'cer',i:'ti-alert-circle'}}[t]||{c:'cer',i:'ti-alert-circle'};
+  return`<div class="cbox ${m.c}"><i class="ti ${m.i}"></i><span style="white-space:pre-wrap">${e(msg)}</span></div>`;
 }
 
-/* ━━ 接続テスト ━━ */
 async function doTest(){
-  const rawU = $('sb-url').value;
-  const rawK = $('sb-key').value;
-  const box  = $('cst');
-
+  const rawU=$('sb-url').value, rawK=$('sb-key').value, box=$('cst');
   if(!rawU.trim()||!rawK.trim()){box.innerHTML=cBox('e','URLとAnon Keyの両方を入力してください');return;}
-
-  const u = cleanUrl(rawU);
-  const k = rawK.trim().replace(/\r?\n/g,'').replace(/\s/g,'');
-
-  // URL形式チェック
-  if(!u.match(/^https:\/\/[a-z0-9]+\.supabase\.co$/i)){
-    box.innerHTML=cBox('e',
-      'URLの形式が正しくありません。\n正しい形式: https://xxxxx.supabase.co\n\n'
-      +'Supabase > Settings > API の\n「Project URL」をコピーしてください。\n\n'
-      +'現在の入力（正規化後）: '+u);
-    return;
-  }
-  // Key形式チェック
-  if(!k.startsWith('eyJ')){
-    box.innerHTML=cBox('e',
-      'Anon Keyの形式が正しくありません。\n「eyJ」で始まる文字列を入力してください。\n\n'
-      +'Supabase > Settings > API の\n「anon public」をコピーしてください。\n'
-      +'（「service_role」は使わないでください）');
-    return;
-  }
-
-  // 正規化済みの値を表示
-  $('sb-url').value = u;
-
-  // Supabase JS ロード確認
-  if(!window.supabase||!window.supabase.createClient){
-    box.innerHTML=cBox('w',
-      'Supabase JS ライブラリが読み込まれていません。\n'
-      +'ページを再読み込みしてから試してください。\n'
-      +'（インターネット接続を確認してください）');
-    return;
-  }
-
-  box.innerHTML=`<div class="cbox c-i"><div class="sp spsm"></div>
-    <span>接続テスト中…<br>storesテーブルに接続しています</span>
-  </div>`;
-
-  // ── 実際にSupabaseへ接続 ──
-  const result = await initSB(u, k);
-
-  if(result.ok){
-    const stores = result.stores||[];
-    const names  = Array.isArray(stores)?stores.map(s=>s.name||'?').join('、'):'';
-    box.innerHTML=cBox('ok',
-      'Supabase接続に成功しました ✓\n\n'
-      +'接続先: '+u+'\n'
-      +(names?'stores確認: '+names:'storesテーブル: 空（テーブルはあります）')+'\n'
-      +'接続方式: '+result.via);
-    sCfg(u, k);
-    $('go-btn').disabled = false;
-  } else {
-    // 接続失敗 → エラー表示
-    const errMsg = jp(result.error);
-    box.innerHTML=cBox('e', errMsg);
+  const u=cleanUrl(rawU), k=rawK.trim().replace(/\s/g,'');
+  if(!u.match(/^https:\/\/[a-z0-9-]+\.supabase\.co$/i)){box.innerHTML=cBox('e','URLの形式が正しくありません\n正しい形式: https://xxxxx.supabase.co');return;}
+  if(!k.startsWith('eyJ')){box.innerHTML=cBox('e','Anon Keyは「eyJ」で始まる文字列を入力してください');return;}
+  $('sb-url').value=u;
+  box.innerHTML=`<div class="cbox cif"><div class="sp spsm"></div><span>接続テスト中…</span></div>`;
+  const r=await initSB(u,k);
+  if(r.ok){
+    box.innerHTML=cBox('ok','Supabase接続に成功しました ✓\n接続先: '+u+'\n'+(r.storeNames?'stores: '+r.storeNames:'storesテーブル確認済み'));
+    sCfg(u,k);$('go-btn').disabled=false;
+  }else{
+    box.innerHTML=cBox('e',jp(r.errorMsg||'不明なエラー'));
   }
 }
 
 async function doStart(){
   const rawU=$('sb-url').value, rawK=$('sb-key').value;
   if(!rawU.trim()||!rawK.trim()){toast('URLとキーを入力してください',true);return;}
-  const u=cleanUrl(rawU), k=rawK.trim().replace(/\r?\n/g,'').replace(/\s/g,'');
-  sCfg(u,k);
-  showL('Supabaseに接続中…');
-  const r=await initSB(u,k);
-  hideL();
-  if(!r.ok){toast('接続失敗: '+jp(r.error).split('\n')[0],true);return;}
-  S.view='login';render();
+  const u=cleanUrl(rawU), k=rawK.trim().replace(/\s/g,'');
+  sCfg(u,k);showL('接続中…');
+  const r=await initSB(u,k);hideL();
+  if(!r.ok){toast(jp(r.errorMsg||'接続失敗').split('\n')[0],true);return;}
+  S.bootError='';S.view='login';render();
 }
-
 function doDemo(){isReady=false;SB=null;S.view='login';render();}
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   LOGIN ページ
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-function vLogin(){return`
+/* ══════════════════════════════════════════
+   LOGIN
+══════════════════════════════════════════ */
+function vLogin(){
+  const sv=lCfg();
+  let urlShort='';try{urlShort=new URL(sv.url||'').hostname;}catch(_){urlShort=sv.url||'';}
+  return`
 <div class="lp">
   <div class="logo"><i class="ti ti-truck-delivery"></i></div>
   <div style="font-size:22px;font-weight:600;margin-bottom:4px;text-align:center">CK発注システム</div>
-  <div style="font-size:14px;color:var(--m);margin-bottom:28px;text-align:center">
-    たくあんグループ 6店舗<br>
-    ${isReady
-      ?'<span style="color:var(--g);font-weight:600"><span class="rdot"></span>Supabase接続済み</span>'
-      :'<span style="color:var(--o);font-size:12px">⚠️ デモモード（端末内のみ）</span>'}
-  </div>
-  <div class="lc">
+  <div style="font-size:14px;color:var(--m);margin-bottom:20px;text-align:center">たくあんグループ 6店舗</div>
+  ${isReady?`<div style="display:flex;align-items:center;gap:8px;background:var(--gl);border:1px solid var(--gm);border-radius:var(--r8);padding:10px 14px;margin-bottom:16px;max-width:380px;width:100%">
+    <span class="rdot"></span>
+    <div style="flex:1;font-size:13px;color:var(--gd);font-weight:500">Supabase接続済み<br><span style="font-weight:400;opacity:.8">${e(urlShort)}</span></div>
+    <button onclick="S.view='setup';render()" style="background:none;border:1px solid var(--gm);border-radius:6px;padding:5px 10px;font-size:12px;color:var(--gd);cursor:pointer">設定変更</button>
+  </div>`:`<div style="background:var(--ol);border:1px solid #FAC775;border-radius:var(--r8);padding:10px 14px;margin-bottom:16px;max-width:380px;width:100%;font-size:13px;color:var(--od)">
+    ⚠️ デモモード（端末内のみ・発注はCKに届きません）
+    <button onclick="S.view='setup';render()" style="display:block;margin-top:6px;background:none;border:1px solid var(--od);border-radius:6px;padding:5px 10px;font-size:12px;color:var(--od);cursor:pointer">Supabase設定へ</button>
+  </div>`}
+  <div class="lcard">
     <span class="sl">役割を選択してください</span>
     ${rBtn('mgr','ti-building-store','#E1F5EE','var(--g)','店長','発注・履歴確認')}
-    ${rBtn('ck', 'ti-package',      '#E6F1FB','var(--b)','CK担当','発注確認・出荷管理')}
-    ${rBtn('adm','ti-settings',     '#FAEEDA','var(--o)','管理者','発注履歴・設定')}
-    ${S.role==='mgr'?`
-      <div style="margin-top:14px">
-        <span class="sl">店舗を選択してください</span>
-        <select class="fsel" onchange="S.storeId=parseInt(this.value)||null;render()">
-          <option value="">— 店舗を選んでください —</option>
-          ${STORES.map(s=>`<option value="${s.id}"${S.storeId===s.id?' selected':''}>${e(s.name)}</option>`).join('')}
-        </select>
-      </div>`:''}
-    <button class="btn bg" onclick="doLogin()"
-      ${(!S.role||(S.role==='mgr'&&!S.storeId))?'disabled':''}>
+    ${rBtn('ck','ti-package','#E6F1FB','var(--b)','CK担当','発注確認・出荷管理')}
+    ${rBtn('adm','ti-settings','#FAEEDA','var(--o)','管理者','商品管理・履歴・設定')}
+    ${S.role==='mgr'?`<div style="margin-top:14px">
+      <span class="sl">店舗を選択してください</span>
+      <select class="fsel" style="margin-bottom:14px" onchange="S.storeId=parseInt(this.value)||null;render()">
+        <option value="">— 店舗を選んでください —</option>
+        ${STORES.filter(s=>s.is_active!==false).map(s=>`<option value="${s.id}"${S.storeId===s.id?' selected':''}>${e(s.name)}</option>`).join('')}
+      </select>
+    </div>`:''}
+    <button class="btn bg" onclick="doLogin()" ${(!S.role||(S.role==='mgr'&&!S.storeId))?'disabled':''}>
       <i class="ti ti-login"></i>ログイン
     </button>
-    ${isReady?'':`<div style="margin-top:10px">
-      <button class="btn bgy" onclick="S.view='setup';render()" style="font-size:13px;padding:11px">
-        <i class="ti ti-settings"></i>Supabase設定へ
-      </button></div>`}
   </div>
-</div>`;}
-
+</div>`;
+}
 function rBtn(r,ic,bg,cl,name,desc){
-  return`<button class="rb${S.role===r?' sel':''}" onclick="S.role='${r}';S.storeId=null;render()">
+  return`<button class="rbtn${S.role===r?' sel':''}" onclick="S.role='${r}';S.storeId=null;render()">
     <div class="ri" style="background:${bg};color:${cl}"><i class="ti ${ic}"></i></div>
-    <div><div style="font-size:15px;font-weight:600">${name}</div>
-      <div style="font-size:13px;color:var(--m);margin-top:2px">${desc}</div></div>
+    <div><div style="font-size:15px;font-weight:600">${name}</div><div style="font-size:13px;color:var(--m);margin-top:2px">${desc}</div></div>
   </button>`;
 }
 
@@ -778,87 +547,100 @@ async function doLogin(){
   startDW();
   if(S.view==='manager'||S.view==='ck'){
     showL('本日の発注データを読み込み中…');
-    await fetchToday();
-    hideL();
+    await fetchToday();hideL();
   }
   if(S.view==='ck'){startAR();subRT();}
   if(S.view==='admin'){
     const t=jst.iso,mo=new Date();mo.setDate(mo.getDate()-30);
-    S.af={from:mo.toISOString().slice(0,10),to:t,sid:'',status:'',kw:''};
-    showL('発注履歴を読み込み中…');
-    await fetchAdmin();
-    hideL();
+    S.af={from:mo.toISOString().slice(0,10),to:t,sid:'',catId:'',status:'',kw:''};
+    showL('データ読み込み中…');await fetchAdmin();hideL();
   }
   render();
 }
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+/* ══════════════════════════════════════════
    データ取得
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+══════════════════════════════════════════ */
 async function fetchToday(){
   const today=jst.iso;
-  if(!isReady||!SB){S.todayOrders=demoO();return;}
+  if(!isReady||!SB){S.todayOrders=demoOrders();return;}
   try{
-    const {data:orders,error:e1}=await SB.from('orders').select('*').eq('order_date',today).order('created_at',{ascending:false});
-    if(e1)throw e1;
+    const{data:orders,error:e1}=await SB.from('orders').select('*').eq('order_date',today).order('created_at',{ascending:false});
+    if(e1)throw new Error(safeMsg(e1));
     let items=[];
     if(orders&&orders.length){
-      const {data:ii,error:e2}=await SB.from('order_items').select('*').in('order_id',orders.map(o=>o.id));
-      if(e2)throw e2;
+      const{data:ii,error:e2}=await SB.from('order_items').select('*').in('order_id',orders.map(o=>o.id));
+      if(e2)throw new Error(safeMsg(e2));
       items=ii||[];
     }
     S.todayOrders=(orders||[]).map(o=>({...o,items:items.filter(i=>i.order_id===o.id)}));
-  }catch(err){toast('データ取得エラー: '+jp(err).split('\n')[0],true);S.todayOrders=demoO();}
+  }catch(err){toast('データ取得エラー: '+safeMsg(err).split('\n')[0],true);S.todayOrders=demoOrders();}
 }
 
 async function fetchAdmin(){
-  if(!isReady||!SB){S.adminOrders=demoO();return;}
+  if(!isReady||!SB){S.adminOrders=demoOrders();return;}
   try{
     const f=S.af;
     let q=SB.from('orders').select('*').order('order_date',{ascending:false}).limit(500);
-    if(f.from)  q=q.gte('order_date',f.from);
-    if(f.to)    q=q.lte('order_date',f.to);
-    if(f.sid)   q=q.eq('store_id',parseInt(f.sid));
+    if(f.from)q=q.gte('order_date',f.from);
+    if(f.to)  q=q.lte('order_date',f.to);
+    if(f.sid) q=q.eq('store_id',parseInt(f.sid));
     if(f.status)q=q.eq('status',f.status);
-    const {data:orders,error:e1}=await q;
-    if(e1)throw e1;
+    const{data:orders,error:e1}=await q;
+    if(e1)throw new Error(safeMsg(e1));
     let items=[];
     if(orders&&orders.length){
-      const {data:ii,error:e2}=await SB.from('order_items').select('*').in('order_id',orders.map(o=>o.id));
+      const{data:ii}=await SB.from('order_items').select('*').in('order_id',orders.map(o=>o.id));
       items=ii||[];
     }
     let res=(orders||[]).map(o=>({...o,items:(items||[]).filter(i=>i.order_id===o.id)}));
     if(f.kw)res=res.filter(o=>o.store_name.includes(f.kw)||(o.memo||'').includes(f.kw)||(o.items||[]).some(i=>i.product_name.includes(f.kw)));
     S.adminOrders=res;
-  }catch(err){toast('読み込みエラー: '+jp(err).split('\n')[0],true);S.adminOrders=[];}
+  }catch(err){toast('読み込みエラー: '+safeMsg(err).split('\n')[0],true);S.adminOrders=[];}
 }
 
 async function fetchHist(){
-  const today=jst.iso;
   if(!isReady||!SB){S.histOrders=[];return;}
   try{
-    const {data:orders,error:e1}=await SB.from('orders').select('*').lt('order_date',today).order('order_date',{ascending:false}).limit(200);
-    if(e1)throw e1;
+    const{data:orders,error:e1}=await SB.from('orders').select('*').lt('order_date',jst.iso).order('order_date',{ascending:false}).limit(200);
+    if(e1)throw new Error(safeMsg(e1));
     let items=[];
     if(orders&&orders.length){
-      const {data:ii}=await SB.from('order_items').select('*').in('order_id',orders.map(o=>o.id));
+      const{data:ii}=await SB.from('order_items').select('*').in('order_id',orders.map(o=>o.id));
       items=ii||[];
     }
     S.histOrders=(orders||[]).map(o=>({...o,items:items.filter(i=>i.order_id===o.id)}));
   }catch(_){S.histOrders=[];}
 }
 
-function demoO(){
+// PSV再読み込み（商品管理後に呼ぶ）
+async function reloadMaster(){
+  if(!isReady||!SB)return;
+  try{
+    const[cr,pr,psvR]=await Promise.all([
+      SB.from('categories').select('*').eq('is_active',true).order('display_order'),
+      SB.from('products').select('*').order('category_id').order('display_order'),
+      SB.from('product_store_visibility').select('product_id,store_id,is_visible'),
+    ]);
+    if(cr.data)CATS=cr.data.filter(c=>c.is_active!==false);
+    if(pr.data)PRODUCTS=pr.data;
+    if(psvR.data){
+      PSV={};
+      psvR.data.filter(r=>r.is_visible).forEach(r=>{
+        if(!PSV[r.product_id])PSV[r.product_id]=[];
+        PSV[r.product_id].push(r.store_id);
+      });
+    }
+  }catch(e){console.warn('master reload failed',safeMsg(e));}
+}
+
+function demoOrders(){
   return[
-    {id:'d1',store_id:1,store_name:'うどん屋たくあん',status:'ordered',is_late:false,
-     created_at:new Date().toISOString(),order_date:jst.iso,memo:'',
-     items:[{product_name:'ヒレカツ肉',quantity:3,unit:'kg'},{product_name:'白米',quantity:10,unit:'kg'}]},
-    {id:'d2',store_id:2,store_name:'お弁当たくあん',status:'no_order',is_late:false,
-     created_at:new Date().toISOString(),order_date:jst.iso,memo:'',items:[]},
+    {id:'d1',store_id:1,store_name:'うどん屋たくあん',status:'ordered',is_late:false,created_at:new Date().toISOString(),order_date:jst.iso,memo:'',items:[{product_name:'ヒレカツ肉',quantity:3,unit:'kg'},{product_name:'白米',quantity:10,unit:'kg'}]},
+    {id:'d2',store_id:2,store_name:'お弁当たくあん',status:'no_order',is_late:false,created_at:new Date().toISOString(),order_date:jst.iso,memo:'',items:[]},
   ];
 }
 
-/* 日付監視 */
 function startDW(){
   if(dateTimer)clearInterval(dateTimer);
   dateTimer=setInterval(()=>{
@@ -869,20 +651,23 @@ function startDW(){
     }
   },60000);
 }
-/* 自動ポーリング */
 function startAR(){
   if(autoTimer)clearInterval(autoTimer);
   autoTimer=setInterval(()=>{if(S.view==='ck')fetchToday().then(render);},30000);
 }
-/* Realtime */
 function subRT(){
-  if(!isReady||!SB||!SB.channel)return;
-  try{SB.channel('ord-ch').on('postgres_changes',{event:'*',schema:'public',table:'orders'},()=>fetchToday().then(render)).subscribe();}catch(_){}
+  if(!isReady||!SB)return;
+  try{
+    if(realtimeCh){try{SB.removeChannel(realtimeCh);}catch(_){}}
+    realtimeCh=SB.channel('ord-rt')
+      .on('postgres_changes',{event:'*',schema:'public',table:'orders'},()=>fetchToday().then(render))
+      .subscribe();
+  }catch(_){}
 }
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   MANAGER
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* ══════════════════════════════════════════
+   MANAGER APP
+══════════════════════════════════════════ */
 function vManager(){
   const st=SD();
   const my=S.todayOrders.find(o=>o.store_id===S.storeId);
@@ -896,13 +681,12 @@ function vManager(){
     <div class="con">
       ${!isReady?`<div class="al aw"><i class="ti ti-alert-triangle"></i>
         <span>デモモード: 発注はCKに届きません。<button onclick="S.view='setup';render()"
-          style="background:none;border:none;color:var(--od);text-decoration:underline;cursor:pointer;font-size:13px;padding:0">
-          Supabase設定へ →</button></span></div>`:''}
+          style="background:none;border:none;color:var(--od);text-decoration:underline;cursor:pointer;font-size:13px;padding:0">Supabase設定へ</button></span></div>`:''}
       ${S.phase==='home'?mHome(my):S.phase==='order'?mOrder():S.phase==='confirm'?mConfirm()
        :S.phase==='success'?mSuccess():S.phase==='noorder_confirm'?mNoConf():mNoDone()}
     </div>
     <nav class="nav">
-      <button class="nb${S.phase==='home'?'  on':''}"  onclick="go('home')"><i class="ti ti-home"></i>ホーム</button>
+      <button class="nb${S.phase==='home'?' on':''}" onclick="go('home')"><i class="ti ti-home"></i>ホーム</button>
       <button class="nb${S.phase==='order'?' on':''}" onclick="go('order')"><i class="ti ti-shopping-cart"></i>発注する</button>
       <button class="nb${S.phase==='history'?' on':''}" onclick="go('history')"><i class="ti ti-history"></i>履歴</button>
     </nav>
@@ -911,9 +695,9 @@ function vManager(){
 }
 
 function mHome(my){
-  const st=my?my.status:'unconfirmed', m=sMeta(st);
-  const done=st==='ordered'||st==='late'||st==='ck_confirmed'||st==='shipped';
-  const ns=st==='no_order';
+  const status=my?my.status:'unconfirmed',m=sMeta(status);
+  const done=status==='ordered'||status==='late'||status==='ck_confirmed'||status==='shipped';
+  const ns=status==='no_order';
   const t=my?new Date(my.created_at).toLocaleTimeString('ja-JP',{timeZone:'Asia/Tokyo',hour:'2-digit',minute:'2-digit'}):null;
   return`
   <div style="padding:20px 12px 12px">
@@ -921,9 +705,9 @@ function mHome(my){
     <div style="font-size:22px;font-weight:700;margin-bottom:16px">今日の状況</div>
     <div class="sbar">
       <div class="dot" style="background:${m.d}"></div>
-      <div style="flex:1"><div class="st">${m.l}</div>
-        <div class="ss">${t?t+' に送信済み':'本日の発注はまだありません'}</div></div>
-      ${bdg(st)}
+      <div style="flex:1"><div style="font-size:15px;font-weight:600">${m.l}</div>
+        <div style="font-size:12px;color:var(--m);margin-top:2px">${t?t+' に送信済み':'本日の発注はまだありません'}</div></div>
+      ${bdg(status)}
     </div>
   </div>
   <div class="fc g10 px12">
@@ -951,25 +735,33 @@ function mHome(my){
 }
 
 function mOrder(){
+  const prods=productsForStore(S.storeId);
   const late=isLate();
+  // カテゴリーごとにグループ化
+  const catIds=[...new Set(prods.map(p=>p.category_id))];
+  const catMap={};
+  CATS.forEach(c=>{catMap[c.id]=c;});
   let h=late?`<div class="al aw"><i class="ti ti-clock"></i><span>締切（${SD().deadline_time}）を過ぎています。締切後発注として記録されます。</span></div>`
            :`<div class="al aok"><i class="ti ti-clock"></i><span>発注締切：本日 <strong>${SD().deadline_time}</strong> まで</span></div>`;
   h+=`<div style="padding:8px 12px 4px"><button class="btn bgy bsm" onclick="cp()"><i class="ti ti-copy"></i>前回発注をコピー</button></div>`;
-  CATS.forEach(cat=>{
-    const pr=PRODUCTS.filter(p=>p.category===cat.id);
-    const op=S.catOpen[cat.id], fi=pr.some(p=>(S.qty[p.id]||0)>0);
+  catIds.forEach(catId=>{
+    const cat=catMap[catId]||{name:'その他',id:catId};
+    const ps=prods.filter(p=>p.category_id===catId);
+    const key='cat_'+catId;
+    if(S.catOpen[key]===undefined)S.catOpen[key]=true;
+    const open=S.catOpen[key];
+    const fi=ps.some(p=>(S.qty[p.id]||0)>0);
     h+=`<div style="border-bottom:1px solid var(--br)">
-      <div class="cath" onclick="S.catOpen['${cat.id}']=!S.catOpen['${cat.id}'];render()">
-        <i class="ti ${cat.icon}" style="font-size:18px;color:var(--g)"></i>
-        <span class="catf">${cat.name}</span>
-        ${fi?'<span class="catv">✓ 入力あり</span>':''}
-        <i class="ti ti-chevron-${op?'up':'down'}" style="font-size:16px;color:var(--h)"></i>
+      <div class="cath" onclick="S.catOpen['${key}']=!S.catOpen['${key}'];render()">
+        <span class="catf">${e(cat.name)}</span>
+        ${fi?'<span style="font-size:12px;color:var(--g);font-weight:600">✓ 入力あり</span>':''}
+        <i class="ti ti-chevron-${open?'up':'down'}" style="font-size:16px;color:var(--h)"></i>
       </div>
-      ${op?pr.map(p=>{const q=S.qty[p.id]||0;return`
+      ${open?ps.map(p=>{const q=S.qty[p.id]||0;return`
         <div class="pi${q>0?' f':''}">
           <div style="flex:1;min-width:0">
             <div class="pn">${p.is_frequent?'⭐ ':''}${e(p.name)}</div>
-            <div class="pu">単位：${p.unit}　最小：${p.min_qty}${p.unit}</div>
+            <div class="pu">単位：${p.unit}　最小：${p.min_qty}${p.unit}${p.memo?'　📝'+e(p.memo):''}</div>
           </div>
           <div class="qc">
             <button class="qb" onclick="dec(${p.id},${p.min_qty})">−</button>
@@ -980,16 +772,7 @@ function mOrder(){
         </div>`}).join(''):''}
     </div>`;
   });
-  const cc=[{id:'meat',n:'肉類'},{id:'rice',n:'米・ご飯類'},{id:'supply',n:'備品・消耗品'}];
-  h+=`<div class="card mt12">
-    <div class="ch"><i class="ti ti-checklist" style="color:var(--g);font-size:22px"></i><div class="ct">発注漏れチェック</div></div>
-    ${cc.map(c=>{const ok=PRODUCTS.filter(p=>p.category===c.id).some(p=>(S.qty[p.id]||0)>0);return`
-    <div class="ckr">
-      <div class="cb${ok?' on':''}">${ok?'<i class="ti ti-check" style="font-size:16px"></i>':''}</div>
-      <span style="flex:1;font-size:14px">${c.n}の発注を確認しましたか？</span>
-      <span class="bdg ${ok?'bok':'bunc'}">${ok?'OK':'未確認'}</span>
-    </div>`;}).join('')}
-  </div>`;
+  if(!prods.length)h+=`<div class="emp"><i class="ti ti-package-off" style="font-size:32px;display:block;margin-bottom:8px;color:var(--h)"></i>この店舗に設定された商品がありません<br><span style="font-size:12px">管理者に商品の表示設定をご依頼ください</span></div>`;
   h+=`<div class="fg mt12"><label class="fl" for="mi">発注メモ（任意）</label>
     <textarea class="fi" id="mi" rows="3" placeholder="CKへの連絡事項">${e(S.memo)}</textarea>
   </div>`;
@@ -1004,7 +787,8 @@ function mOrder(){
 }
 
 function mConfirm(){
-  const late=isLate(), items=PRODUCTS.filter(p=>(S.qty[p.id]||0)>0);
+  const late=isLate();
+  const items=PRODUCTS.filter(p=>(S.qty[p.id]||0)>0);
   return`
   <div style="padding:16px 12px 8px">
     <div style="font-size:20px;font-weight:700;margin-bottom:4px">発注内容の確認</div>
@@ -1022,11 +806,9 @@ function mConfirm(){
     <button class="btn bgy" onclick="go('order')"><i class="ti ti-arrow-left"></i>修正する</button>
   </div>`;
 }
-
 function mSuccess(){
   const items=PRODUCTS.filter(p=>(S.qty[p.id]||0)>0);
-  return`
-  <div class="sw">
+  return`<div class="sw">
     <div class="si" style="background:var(--gl)"><i class="ti ti-circle-check" style="font-size:52px;color:var(--g)"></i></div>
     <div class="sh2" style="color:var(--g)">発注がCKに送信されました！</div>
     <div style="font-size:14px;color:var(--m);line-height:1.7">${jst.disp}<br>${isReady?'Supabaseに保存済み':'デモ（端末内のみ）'}</div>
@@ -1039,54 +821,40 @@ function mSuccess(){
     <button class="btn bgy" onclick="go('home')"><i class="ti ti-home"></i>ホームに戻る</button>
   </div>`;
 }
-
-function mNoConf(){return`
-  <div style="padding:48px 24px;text-align:center">
-    <div style="width:80px;height:80px;background:var(--bl);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px">
-      <i class="ti ti-ban" style="font-size:42px;color:var(--b)"></i></div>
-    <div style="font-size:20px;font-weight:700;margin-bottom:8px;line-height:1.4">本日は発注なし<br>でよいですか？</div>
-    <div style="font-size:14px;color:var(--m);margin-bottom:32px;line-height:1.7">CK担当者に「本日は発注なし」と連絡されます。<br>必要なときはいつでも発注できます。</div>
-    <div class="fc g10">
-      <button class="btn bb" onclick="doNo()" style="font-size:17px;padding:17px"><i class="ti ti-send"></i>発注なしを送信する</button>
-      <button class="btn bgy" onclick="go('home')"><i class="ti ti-arrow-left"></i>戻る</button>
-    </div>
-  </div>`;}
-
-function mNoDone(){return`
-  <div class="sw">
-    <div class="si" style="background:var(--bl)"><i class="ti ti-circle-check" style="font-size:52px;color:var(--b)"></i></div>
-    <div class="sh2" style="color:var(--b)">連絡しました</div>
-    <div style="font-size:14px;color:var(--m);line-height:1.7">「本日は発注なし」をCKに送信しました。</div>
-  </div>
-  <div class="px12 mt12" style="margin-bottom:16px">
-    <button class="btn bgy" onclick="go('home')"><i class="ti ti-home"></i>ホームに戻る</button>
-  </div>`;}
-
+function mNoConf(){return`<div style="padding:48px 24px;text-align:center">
+  <div style="width:80px;height:80px;background:var(--bl);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px">
+    <i class="ti ti-ban" style="font-size:42px;color:var(--b)"></i></div>
+  <div style="font-size:20px;font-weight:700;margin-bottom:8px;line-height:1.4">本日は発注なし<br>でよいですか？</div>
+  <div style="font-size:14px;color:var(--m);margin-bottom:32px;line-height:1.7">CK担当者に「本日は発注なし」と連絡されます。<br>必要なときはいつでも発注できます。</div>
+  <div class="fc g10"><button class="btn bb" onclick="doNo()" style="font-size:17px;padding:17px"><i class="ti ti-send"></i>発注なしを送信する</button>
+  <button class="btn bgy" onclick="go('home')"><i class="ti ti-arrow-left"></i>戻る</button></div>
+</div>`;}
+function mNoDone(){return`<div class="sw">
+  <div class="si" style="background:var(--bl)"><i class="ti ti-circle-check" style="font-size:52px;color:var(--b)"></i></div>
+  <div class="sh2" style="color:var(--b)">連絡しました</div>
+  <div style="font-size:14px;color:var(--m)">「本日は発注なし」をCKに送信しました。</div>
+  <div class="px12 mt12" style="margin-bottom:16px"><button class="btn bgy" onclick="go('home')"><i class="ti ti-home"></i>ホームに戻る</button></div>
+</div>`;}
 function hSheet(){
   const today=jst.iso;
   const hist=S.adminOrders.filter(o=>o.store_id===S.storeId&&o.order_date<today);
-  return`<div class="ov" onclick="go('home')">
-    <div class="sh" onclick="event.stopPropagation()">
-      <div class="shh">
-        <div><div class="sht">過去の発注履歴</div>
-          <div style="font-size:12px;color:var(--m);margin-top:2px">今日より前</div></div>
-        <button class="xcl" onclick="go('home')"><i class="ti ti-x"></i></button>
-      </div>
-      ${hist.length?hist.map(o=>{
-        const t=new Date(o.created_at).toLocaleTimeString('ja-JP',{timeZone:'Asia/Tokyo',hour:'2-digit',minute:'2-digit'});
+  return`<div class="modal-bg" onclick="go('home')">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="mh"><div><div class="mt">過去の発注履歴</div><div style="font-size:12px;color:var(--m);margin-top:2px">今日より前</div></div>
+        <button class="xcl" onclick="go('home')"><i class="ti ti-x"></i></button></div>
+      ${hist.length?hist.map(o=>{const t=new Date(o.created_at).toLocaleTimeString('ja-JP',{timeZone:'Asia/Tokyo',hour:'2-digit',minute:'2-digit'});
         return`<div style="display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--br);gap:12px">
           <div style="flex:1"><div style="font-size:15px;font-weight:500">${o.order_date}</div>
-            <div style="font-size:12px;color:var(--m)">${o.items&&o.items.length?o.items.length+'品目':'—'} ｜ ${t}</div>
-          </div>${bdg(o.status)}
-        </div>`;}).join('')
+            <div style="font-size:12px;color:var(--m)">${o.items&&o.items.length?o.items.length+'品目':'—'} ｜ ${t}</div></div>
+          ${bdg(o.status)}</div>`;}).join('')
       :`<div class="emp">過去の履歴がありません</div>`}
     </div>
   </div>`;
 }
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   CK
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* ══════════════════════════════════════════
+   CK APP
+══════════════════════════════════════════ */
 function vCK(){
   const sm={};STORES.forEach(s=>{sm[s.id]='unconfirmed';});S.todayOrders.forEach(o=>{sm[o.store_id]=o.status;});
   const unc=STORES.filter(s=>sm[s.id]==='unconfirmed');
@@ -1108,14 +876,13 @@ function vCK(){
     ${S.detail!=null&&!S.showHist?ckDet(sm):''}
   </div>`;
 }
-
 function ckTV(unc,sm){
   return`
   <div class="tabs" style="top:64px">
     ${['店舗状況','商品合計','出荷管理'].map((t,i)=>`<div class="tab${S.ckTab===i?' on':''}" onclick="S.ckTab=${i};render()">${t}</div>`).join('')}
   </div>
-  ${unc.length?`<div class="al aw"><i class="ti ti-alert-triangle"></i><span>未確認：${unc.map(s=>e(s.short_name)).join('、')}（${unc.length}店舗）<br>発注も「発注なし」連絡もありません</span></div>`
-  :`<div class="al aok"><i class="ti ti-circle-check"></i><span>全店舗から連絡が届いています</span></div>`}
+  ${unc.length?`<div class="al aw"><i class="ti ti-alert-triangle"></i><span>未確認：${unc.map(s=>e(s.short_name||s.name)).join('、')}（${unc.length}店舗）</span></div>`
+              :`<div class="al aok"><i class="ti ti-circle-check"></i><span>全店舗から連絡が届いています</span></div>`}
   ${S.ckTab===0?ckSt(sm):S.ckTab===1?ckTo():ckSh()}
   <div style="text-align:center;padding:6px 0 2px;font-size:11px;color:var(--h)">
     ${isReady?'30秒ごとに自動更新':'デモモード'}
@@ -1127,50 +894,45 @@ function ckTV(unc,sm){
     </button>
   </div>`;
 }
-
 function ckSt(sm){
-  const n=(ks)=>STORES.filter(s=>ks.includes(sm[s.id])).length;
+  const n=ks=>STORES.filter(s=>ks.includes(sm[s.id])).length;
   let h=`<div class="sg">
     <div class="sc2"><div class="sl3">発注あり</div><div class="sv" style="color:var(--g)">${n(['ordered','late','ck_confirmed','shipped'])}</div></div>
     <div class="sc2"><div class="sl3">発注なし連絡</div><div class="sv" style="color:var(--b)">${n(['no_order'])}</div></div>
     <div class="sc2"><div class="sl3">未確認</div><div class="sv" style="color:var(--gr)">${n(['unconfirmed'])}</div></div>
     <div class="sc2"><div class="sl3">締切後</div><div class="sv" style="color:var(--o)">${n(['late'])}</div></div>
   </div>`;
-  const grp=[
+  const grps=[
     {ks:['ordered','late','ck_confirmed','shipped'],l:'本日発注あり',c:'var(--g)'},
     {ks:['no_order'],l:'発注なし（連絡済）',c:'var(--b)'},
     {ks:['unconfirmed'],l:'未確認（まだ連絡なし）',c:'var(--gr)'},
   ];
-  grp.forEach(g=>{
+  grps.forEach(g=>{
     const list=STORES.filter(s=>g.ks.includes(sm[s.id]));
     if(!list.length)return;
     h+=`<div class="sl2" style="color:${g.c}">${g.l}</div>
     <div class="card" style="margin-top:0">
-      ${list.map(s=>{
-        const m=sMeta(sm[s.id]);
-        const o=S.todayOrders.find(o=>o.store_id===s.id);
+      ${list.map(s=>{const m=sMeta(sm[s.id]);const o=S.todayOrders.find(o=>o.store_id===s.id);
         const t=o?new Date(o.created_at).toLocaleTimeString('ja-JP',{timeZone:'Asia/Tokyo',hour:'2-digit',minute:'2-digit'}):null;
         return`<div class="sr" onclick="S.detail=${s.id};render()">
           <div class="sd" style="background:${m.d}"></div>
           <div style="flex:1;min-width:0">
             <div style="font-size:15px;font-weight:600">${e(s.name)}</div>
             <div style="font-size:12px;color:var(--m)">${t?t+' 送信':'—'}${o&&o.items&&o.items.length?' · '+o.items.length+'品目':''}</div>
-          </div>
-          ${bdg(sm[s.id])}
+          </div>${bdg(sm[s.id])}
           <i class="ti ti-chevron-right" style="font-size:16px;color:var(--h);flex-shrink:0"></i>
         </div>`;}).join('')}
     </div>`;
   });
   return h;
 }
-
 function ckTo(){
   const tot={};
   S.todayOrders.filter(o=>o.status!=='no_order').forEach(o=>{
     (o.items||[]).forEach(i=>{
       const k=`${i.product_name}||${i.unit}`;
       const pr=PRODUCTS.find(p=>p.name===i.product_name);
-      tot[k]=tot[k]||{name:i.product_name,unit:i.unit,qty:0,cat:pr?pr.category:'other'};
+      tot[k]=tot[k]||{name:i.product_name,unit:i.unit,qty:0,catId:pr?pr.category_id:0};
       tot[k].qty+=Number(i.quantity);
     });
   });
@@ -1178,22 +940,24 @@ function ckTo(){
   let h=`<div style="padding:10px 12px 4px;font-size:13px;color:var(--m)">発注店舗の合計（本日 ${n}店舗）</div>`;
   if(!Object.keys(tot).length)return h+`<div class="emp">本日の発注データがありません</div>`;
   CATS.forEach(cat=>{
-    const items=Object.values(tot).filter(t=>t.cat===cat.id);
+    const items=Object.values(tot).filter(t=>t.catId===cat.id);
     if(!items.length)return;
-    h+=`<div class="sl2" style="display:flex;align-items:center;gap:6px"><i class="ti ${cat.icon}" style="font-size:15px;color:var(--g)"></i>${cat.name}</div>
+    h+=`<div class="sl2" style="display:flex;align-items:center;gap:6px">${e(cat.name)}</div>
     <div class="card" style="margin-top:0">
       ${items.map(i=>`<div class="ro"><span class="rn">${e(i.name)}</span><span class="rq">${i.qty} ${e(i.unit)}</span></div>`).join('')}
     </div>`;
   });
+  // カテゴリー未設定分
+  const other=Object.values(tot).filter(t=>!CATS.find(c=>c.id===t.catId));
+  if(other.length){h+=`<div class="sl2">その他</div><div class="card" style="margin-top:0">${other.map(i=>`<div class="ro"><span class="rn">${e(i.name)}</span><span class="rq">${i.qty} ${e(i.unit)}</span></div>`).join('')}</div>`;}
   return h;
 }
-
 function ckSh(){
   const list=S.todayOrders.filter(o=>o.status!=='no_order');
   if(!list.length)return`<div class="emp">本日発注のある店舗はありません</div>`;
   return list.map(o=>{
     const st=STORES.find(s=>s.id===o.store_id);
-    const rdy=S.ckChecked[o.id+'_r']||false, shp=S.ckChecked[o.id+'_s']||false;
+    const rdy=S.ckChecked[o.id+'_r']||false,shp=S.ckChecked[o.id+'_s']||false;
     return`<div class="card">
       <div class="ch" style="background:var(--sf)">
         <i class="ti ti-building-store" style="color:var(--g);font-size:20px"></i>
@@ -1215,27 +979,23 @@ function ckSh(){
     </div>`;
   }).join('');
 }
-
 function ckDet(sm){
-  const sid=S.detail, st=STORES.find(x=>x.id===sid), status=sm[sid]||'unconfirmed';
-  const m=sMeta(status), o=S.todayOrders.find(x=>x.store_id===sid);
+  const sid=S.detail,st=STORES.find(x=>x.id===sid),status=sm[sid]||'unconfirmed';
+  const m=sMeta(status),o=S.todayOrders.find(x=>x.store_id===sid);
   const t=o?new Date(o.created_at).toLocaleTimeString('ja-JP',{timeZone:'Asia/Tokyo',hour:'2-digit',minute:'2-digit'}):null;
-  return`<div class="ov" onclick="S.detail=null;render()">
-    <div class="sh" onclick="event.stopPropagation()">
-      <div class="shh">
-        <div><div class="sht">${e(st?st.name:'')}</div>
-          <div style="font-size:12px;color:var(--m);margin-top:2px">${st?e(st.manager_name||''):''}${t?' ｜ '+t+' 送信':''}</div></div>
+  return`<div class="modal-bg" onclick="S.detail=null;render()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="mh">
+        <div><div class="mt">${e(st?st.name:'')}</div><div style="font-size:12px;color:var(--m);margin-top:2px">${st?e(st.manager_name||''):''}${t?' ｜ '+t+' 送信':''}</div></div>
         ${bdg(status)}
         <button class="xcl" onclick="S.detail=null;render()"><i class="ti ti-x"></i></button>
       </div>
       ${status==='unconfirmed'?`<div class="al aw"><i class="ti ti-alert-triangle"></i><span>発注も「発注なし」連絡も届いていません。</span></div>`:''}
       ${status==='no_order'?`<div class="al ai"><i class="ti ti-info-circle"></i><span>「本日は発注なし」の連絡がありました。</span></div>`:''}
-      ${o&&o.items&&o.items.length?`<div class="sl2">発注内容</div>
-      <div class="card" style="margin-top:0">
+      ${o&&o.items&&o.items.length?`<div class="sl2">発注内容</div><div class="card" style="margin-top:0">
         ${o.items.map(i=>`<div class="ro"><span class="rn">${e(i.product_name)}</span><span class="rq">${i.quantity} ${e(i.unit)}</span></div>`).join('')}
       </div>`:''}
-      ${o&&status!=='no_order'?`
-      <div class="fc g8 px12 mt8">
+      ${o&&status!=='no_order'?`<div class="fc g8 px12 mt8">
         <button class="btn bo" onclick="ckR('${o.id}');S.detail=null;render()"><i class="ti ti-package"></i>出荷準備済みにする</button>
         <button class="btn bgy" onclick="ckS('${o.id}');S.detail=null;render()"><i class="ti ti-truck"></i>出荷済みにする</button>
       </div>`:''}
@@ -1245,7 +1005,6 @@ function ckDet(sm){
     </div>
   </div>`;
 }
-
 function ckHV(){
   const bd={};S.histOrders.forEach(o=>{if(!bd[o.order_date])bd[o.order_date]=[];bd[o.order_date].push(o);});
   const dates=Object.keys(bd).sort().reverse();
@@ -1260,9 +1019,7 @@ function ckHV(){
   ${dates.length?dates.map(date=>`
     <div class="sl2" style="color:var(--t)">${date}</div>
     <div class="card" style="margin-top:0">
-      ${bd[date].map(o=>{
-        const st=STORES.find(s=>s.id===o.store_id);
-        const t=new Date(o.created_at).toLocaleTimeString('ja-JP',{timeZone:'Asia/Tokyo',hour:'2-digit',minute:'2-digit'});
+      ${bd[date].map(o=>{const st=STORES.find(s=>s.id===o.store_id);const t=new Date(o.created_at).toLocaleTimeString('ja-JP',{timeZone:'Asia/Tokyo',hour:'2-digit',minute:'2-digit'});
         return`<div style="padding:12px 16px;border-bottom:1px solid var(--br)">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
             <div style="font-size:14px;font-weight:600;flex:1">${e(st?st.name:o.store_name)}</div>${bdg(o.status)}</div>
@@ -1272,26 +1029,30 @@ function ckHV(){
   :`<div class="emp">過去の履歴がありません</div>`}`;
 }
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   ADMIN
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* ══════════════════════════════════════════
+   ADMIN APP
+══════════════════════════════════════════ */
 function vAdmin(){return`<div class="app">
   <div class="bar">
     <i class="ti ti-settings" style="font-size:22px;color:var(--o)"></i>
     <div class="bar-t" style="flex:1">管理者</div>
+    <span style="font-size:12px;color:${isReady?'var(--g)':'var(--o)'}">
+      ${isReady?'<span class="rdot"></span>接続済み':'デモモード'}
+    </span>
     ${lbtn()}
   </div>
   <div class="con">
     <div class="tabs" style="top:64px">
-      ${['発注履歴','店舗設定','商品管理'].map((t,i)=>`<div class="tab${S.adminTab===i?' on':''}" onclick="S.adminTab=${i};render()">${t}</div>`).join('')}
+      ${['発注履歴','商品管理','カテゴリー','店舗設定'].map((t,i)=>`<div class="tab${S.adminTab===i?' on':''}" onclick="S.adminTab=${i};render()">${t}</div>`).join('')}
     </div>
-    ${S.adminTab===0?aH():S.adminTab===1?aSt():aPr()}
+    ${S.adminTab===0?aHistory():S.adminTab===1?aProducts():S.adminTab===2?aCats():aStores()}
   </div>
   <nav class="nav"><button class="nb on"><i class="ti ti-settings"></i>管理</button></nav>
 </div>`;}
 
-function aH(){
-  const orders=S.adminOrders, f=S.af, today=jst.iso;
+/* ── 発注履歴タブ ── */
+function aHistory(){
+  const orders=S.adminOrders,f=S.af,today=jst.iso;
   return`
   <div class="sg">
     <div class="sc2"><div class="sl3">本日の発注</div><div class="sv" style="color:var(--g)">${orders.filter(o=>o.order_date===today&&o.status!=='no_order').length}</div></div>
@@ -1352,53 +1113,477 @@ function aH(){
         </div>`:''}
         ${o.memo?`<div style="font-size:12px;color:var(--m);margin-top:4px">📝 ${e(o.memo)}</div>`:''}
       </div>`;}).join('')
-    :`<div class="emp">条件に一致する発注がありません</div>`}
+    :`<div class="emp">条件に一致する発注がありません<br><button class="btn bo bsm" style="margin-top:12px" onclick="adRef()"><i class="ti ti-refresh"></i>再読み込み</button></div>`}
   </div>`;
 }
 
-function aSt(){return`
-  <div class="sl2">店舗一覧</div>
+/* ── 商品管理タブ ── */
+function aProducts(){
+  const active=PRODUCTS.filter(p=>p.is_active!==false);
+  const inactive=PRODUCTS.filter(p=>p.is_active===false);
+  return`
+  <div style="padding:12px 12px 4px;display:flex;align-items:center;gap:8px">
+    <div style="flex:1;font-size:14px;color:var(--m)">登録商品 ${active.length}件（非表示 ${inactive.length}件）</div>
+    <button class="btn bg bsm" onclick="openProductModal(null)"><i class="ti ti-plus"></i>商品追加</button>
+  </div>
+  <div class="card" style="margin-top:4px">
+    ${active.length?active.map(p=>{
+      const cat=CATS.find(c=>c.id===p.category_id);
+      const visStores=PSV[p.id]||[];
+      return`<div class="pi">
+        <div style="flex:1;min-width:0">
+          <div class="pn">${p.is_frequent?'⭐ ':''}${e(p.name)}</div>
+          <div class="pu">${e(cat?cat.name:(p.category_name||'カテゴリー未設定'))} / ${e(p.unit)}
+            ${visStores.length?` ｜ ${visStores.length}店舗に表示`:'｜ 全店舗に表示'}
+          </div>
+          ${p.memo?`<div style="font-size:11px;color:var(--h);margin-top:2px">📝 ${e(p.memo)}</div>`:''}
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button class="btn bo bsm" onclick="openProductModal(${p.id})"><i class="ti ti-edit" style="font-size:13px"></i></button>
+          <button class="btn bgy bsm" onclick="toggleProductActive(${p.id},false)"><i class="ti ti-eye-off" style="font-size:13px"></i></button>
+        </div>
+      </div>`;}).join('')
+    :`<div class="emp">商品がありません<br><button class="btn bg bsm" style="margin-top:12px" onclick="openProductModal(null)"><i class="ti ti-plus"></i>商品を追加する</button></div>`}
+  </div>
+  ${inactive.length?`
+  <div class="sl2" style="color:var(--gr)">非表示の商品（${inactive.length}件）</div>
+  <div class="card" style="margin-top:0">
+    ${inactive.map(p=>`<div class="pi">
+      <div style="flex:1;min-width:0">
+        <div class="pn" style="color:var(--h)">${e(p.name)}</div>
+        <div class="pu">${e(p.unit)}</div>
+      </div>
+      <button class="btn bo bsm" onclick="toggleProductActive(${p.id},true)"><i class="ti ti-eye" style="font-size:13px"></i>表示に戻す</button>
+    </div>`).join('')}
+  </div>`:''}`;
+}
+
+/* ── カテゴリー管理タブ ── */
+function aCats(){
+  return`
+  <div style="padding:12px 12px 4px;display:flex;align-items:center;gap:8px">
+    <div style="flex:1;font-size:14px;color:var(--m)">カテゴリー ${CATS.length}件</div>
+    <button class="btn bg bsm" onclick="openCatModal(null)"><i class="ti ti-plus"></i>追加</button>
+  </div>
+  <div class="card" style="margin-top:4px">
+    ${CATS.length?CATS.map(c=>`<div class="pi">
+      <div style="flex:1;min-width:0">
+        <div class="pn">${e(c.name)}</div>
+        <div class="pu">表示順: ${c.display_order}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button class="btn bo bsm" onclick="openCatModal(${c.id})"><i class="ti ti-edit" style="font-size:13px"></i></button>
+      </div>
+    </div>`).join('')
+    :`<div class="emp">カテゴリーがありません</div>`}
+  </div>`;
+}
+
+/* ── 店舗設定タブ ── */
+function aStores(){
+  return`
+  <div class="sl2">店舗一覧・設定</div>
   <div class="card" style="margin-top:4px">
     ${STORES.map(s=>`<div style="padding:14px 16px;border-bottom:1px solid var(--br)">
-      <div style="font-size:15px;font-weight:600;margin-bottom:4px">${e(s.name)}</div>
-      <div style="font-size:13px;color:var(--m)"><i class="ti ti-clock" style="font-size:13px"></i> 締切 ${s.deadline_time}　<i class="ti ti-user" style="font-size:13px"></i> ${e(s.manager_name||'')}</div>
-      <div style="margin-top:6px"><span class="bdg bunc" style="font-size:11px">発注頻度：店舗判断（固定なし）</span></div>
-    </div>`).join('')}
-  </div>`;}
-
-function aPr(){return`
-  <div class="card" style="margin-top:10px">
-    <div class="ch"><div class="ct">登録商品（${PRODUCTS.length}件）</div></div>
-    ${PRODUCTS.map(p=>`<div class="pi">
-      <div style="flex:1;min-width:0">
-        <div class="pn">${p.is_frequent?'⭐ ':''}${e(p.name)}</div>
-        <div class="pu">${e(CATS.find(c=>c.id===p.category)?.name||p.category)} / ${e(p.unit)}</div>
+      <div style="display:flex;align-items:center;margin-bottom:6px">
+        <div style="font-size:15px;font-weight:600;flex:1">${e(s.name)}</div>
+        <button class="btn bo bsm" onclick="openStoreProducts(${s.id})"><i class="ti ti-list" style="font-size:13px"></i>商品設定</button>
+      </div>
+      <div style="font-size:13px;color:var(--m)">
+        <i class="ti ti-clock" style="font-size:13px"></i> 締切 ${s.deadline_time||'10:00'}　
+        <i class="ti ti-user" style="font-size:13px"></i> ${e(s.manager_name||'')}
       </div>
     </div>`).join('')}
-  </div>`;}
+  </div>
+  <div style="padding:8px 12px">
+    <div class="al agr"><i class="ti ti-info-circle"></i><span>店舗の商品設定は「商品設定」ボタンから各店舗の表示商品を設定できます。</span></div>
+  </div>`;
+}
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+/* ══════════════════════════════════════════
+   MODAL （商品追加・編集）
+══════════════════════════════════════════ */
+function renderModal(){
+  const m=S.modal;
+  if(!m)return;
+  let html='';
+  if(m.type==='product')html=modalProduct(m.data);
+  else if(m.type==='category')html=modalCategory(m.data);
+  else if(m.type==='store_products')html=modalStoreProducts(m.data);
+  const el=document.createElement('div');
+  el.id='modal-container';
+  el.innerHTML=html;
+  document.body.appendChild(el);
+}
+
+function closeModal(){S.modal=null;const el=$('modal-container');if(el)el.remove();}
+
+/* ── 商品モーダル ── */
+function openProductModal(productId){
+  const p=productId?PRODUCTS.find(x=>x.id===productId):null;
+  const visStores=productId?(PSV[productId]||[]):[...STORES.map(s=>s.id)];
+  S.modal={type:'product',data:{p,visStores:[...visStores]}};
+  render();
+}
+
+function modalProduct(d){
+  const p=d.p, isNew=!p;
+  const cats=CATS;
+  return`<div class="modal-bg">
+    <div class="modal" onclick="event.stopPropagation()" style="max-height:95vh">
+      <div class="mh">
+        <div class="mt">${isNew?'商品を追加':'商品を編集'}</div>
+        <button class="xcl" onclick="closeModal()"><i class="ti ti-x"></i></button>
+      </div>
+      <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+        <div>
+          <label class="fl">商品名 <span style="color:var(--rd)">*</span></label>
+          <input type="text" class="fi" id="pm-name" value="${e(p?p.name:'')}" placeholder="例：ヒレカツ肉">
+        </div>
+        <div>
+          <label class="fl">カテゴリー <span style="color:var(--rd)">*</span></label>
+          <select class="fsel" id="pm-cat" style="margin-bottom:0">
+            <option value="">カテゴリーを選択</option>
+            ${cats.map(c=>`<option value="${c.id}"${p&&p.category_id===c.id?' selected':''}>${e(c.name)}</option>`).join('')}
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <label class="fl">単位 <span style="color:var(--rd)">*</span></label>
+            <input type="text" class="fi" id="pm-unit" value="${e(p?p.unit:'')}" placeholder="例：kg、個、袋">
+          </div>
+          <div>
+            <label class="fl">最小発注数</label>
+            <input type="number" class="fi" id="pm-min" value="${p?p.min_qty:1}" min="0.1" step="0.1">
+          </div>
+        </div>
+        <div>
+          <label class="fl">表示順（数字が小さいほど上に表示）</label>
+          <input type="number" class="fi" id="pm-ord" value="${p?p.display_order:10}" min="0" step="10">
+        </div>
+        <div>
+          <label class="fl">備考・メモ</label>
+          <input type="text" class="fi" id="pm-memo" value="${e(p?p.memo||'':'')}" placeholder="例：要冷蔵">
+        </div>
+        <div>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="pm-freq" ${p&&p.is_frequent?'checked':''} style="width:18px;height:18px">
+            <span class="fl" style="margin-bottom:0">よく使う商品（⭐表示）</span>
+          </label>
+        </div>
+        <div>
+          <div class="fl">表示店舗（チェックした店舗に表示）</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">
+            ${STORES.map(s=>`<label style="display:flex;align-items:center;gap:6px;padding:8px 12px;border:1.5px solid var(--br);border-radius:var(--r8);cursor:pointer;background:${d.visStores.includes(s.id)?'var(--gl)':'#fff'};border-color:${d.visStores.includes(s.id)?'var(--g)':'var(--br)'}">
+              <input type="checkbox" id="pm-vis-${s.id}" ${d.visStores.includes(s.id)?'checked':''}
+                onchange="toggleVisStore(${s.id})"
+                style="width:16px;height:16px">
+              <span style="font-size:14px">${e(s.short_name||s.name)}</span>
+            </label>`).join('')}
+          </div>
+          <div style="margin-top:6px;font-size:12px;color:var(--m)">
+            <button onclick="selAllStores(true)" style="background:none;border:none;color:var(--b);cursor:pointer;font-size:12px;text-decoration:underline">全店舗選択</button>
+            ／
+            <button onclick="selAllStores(false)" style="background:none;border:none;color:var(--gr);cursor:pointer;font-size:12px;text-decoration:underline">全店舗解除</button>
+          </div>
+        </div>
+        <div id="pm-err" style="min-height:4px"></div>
+        <button class="btn bg" id="pm-save" onclick="saveProduct(${p?p.id:'null'})">
+          <i class="ti ti-device-floppy"></i>${isNew?'商品を追加する':'変更を保存する'}
+        </button>
+        ${!isNew?`<button class="btn brd" onclick="deleteProduct(${p.id})"><i class="ti ti-trash"></i>この商品を削除する</button>`:''}
+        <button class="btn bgy" onclick="closeModal()"><i class="ti ti-arrow-left"></i>キャンセル</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function toggleVisStore(storeId){
+  if(!S.modal||S.modal.type!=='product')return;
+  const vs=S.modal.data.visStores;
+  const idx=vs.indexOf(storeId);
+  if(idx>=0)vs.splice(idx,1);else vs.push(storeId);
+}
+
+function selAllStores(sel){
+  if(!S.modal||S.modal.type!=='product')return;
+  S.modal.data.visStores=sel?[...STORES.map(s=>s.id)]:[];
+  // チェックボックスを直接更新
+  STORES.forEach(s=>{const el=$(`pm-vis-${s.id}`);if(el)el.checked=sel;});
+  // ラベルの色も更新
+  const labels=document.querySelectorAll('[id^="pm-vis-"]');
+  labels.forEach(el=>{
+    const sid=parseInt(el.id.replace('pm-vis-',''));
+    const lbl=el.closest('label');
+    if(lbl){lbl.style.background=sel?'var(--gl)':'#fff';lbl.style.borderColor=sel?'var(--g)':'var(--br)';}
+  });
+}
+
+async function saveProduct(productId){
+  const name=($('pm-name').value||'').trim();
+  const catId=parseInt($('pm-cat').value)||0;
+  const unit=($('pm-unit').value||'').trim();
+  const minQty=parseFloat($('pm-min').value)||1;
+  const dispOrd=parseInt($('pm-ord').value)||10;
+  const memo=($('pm-memo').value||'').trim();
+  const freq=$('pm-freq').checked;
+  const errEl=$('pm-err');
+
+  if(!name){errEl.innerHTML=`<div class="al ae"><i class="ti ti-alert-circle"></i><span>商品名を入力してください</span></div>`;return;}
+  if(!catId){errEl.innerHTML=`<div class="al ae"><i class="ti ti-alert-circle"></i><span>カテゴリーを選択してください</span></div>`;return;}
+  if(!unit){errEl.innerHTML=`<div class="al ae"><i class="ti ti-alert-circle"></i><span>単位を入力してください</span></div>`;return;}
+
+  // チェックボックスから最新の表示店舗を取得
+  const visStores=STORES.filter(s=>{const el=$(`pm-vis-${s.id}`);return el&&el.checked;}).map(s=>s.id);
+  const cat=CATS.find(c=>c.id===catId);
+  const payload={name,category_id:catId,category_name:cat?cat.name:'',unit,min_qty:minQty,display_order:dispOrd,memo,is_frequent:freq,is_active:true};
+
+  const btn=$('pm-save');if(btn)btn.disabled=true;
+  errEl.innerHTML=`<div class="cbox cif"><div class="sp spsm"></div><span>保存中…</span></div>`;
+
+  try{
+    let savedId=productId;
+    if(!isReady||!SB){
+      // デモモード
+      if(productId){
+        const idx=PRODUCTS.findIndex(p=>p.id===productId);
+        if(idx>=0)PRODUCTS[idx]={...PRODUCTS[idx],...payload};
+      }else{
+        const newId=Date.now();
+        PRODUCTS.push({id:newId,...payload});
+        savedId=newId;
+      }
+    }else{
+      if(productId){
+        const{error}=await SB.from('products').update(payload).eq('id',productId);
+        if(error)throw new Error(safeMsg(error));
+      }else{
+        const{data,error}=await SB.from('products').insert(payload).select();
+        if(error)throw new Error(safeMsg(error));
+        if(data&&data.length)savedId=data[0].id;
+      }
+      // PSV保存
+      if(savedId){
+        // 既存PSVを削除して再挿入
+        if(isReady&&SB){
+          await SB.from('product_store_visibility').delete().eq('product_id',savedId);
+          if(visStores.length){
+            const psvRows=visStores.map(sid=>({product_id:savedId,store_id:sid,is_visible:true}));
+            const{error:pe}=await SB.from('product_store_visibility').insert(psvRows);
+            if(pe)console.warn('PSV保存失敗',safeMsg(pe));
+          }
+        }
+      }
+      await reloadMaster();
+    }
+    // デモ時もPSV更新
+    if(!isReady&&savedId){
+      if(visStores.length)PSV[savedId]=visStores;
+      else delete PSV[savedId];
+    }
+    closeModal();
+    toast(productId?'商品を更新しました':'商品を追加しました');
+    render();
+  }catch(err){
+    if(btn)btn.disabled=false;
+    errEl.innerHTML=`<div class="al ae"><i class="ti ti-alert-circle"></i><span>${e(safeMsg(err))}</span></div>`;
+  }
+}
+
+async function toggleProductActive(productId,active){
+  if(!confirm(active?'この商品を表示に戻しますか？':'この商品を非表示にしますか？'))return;
+  try{
+    const idx=PRODUCTS.findIndex(p=>p.id===productId);
+    if(idx>=0)PRODUCTS[idx].is_active=active;
+    if(isReady&&SB){
+      const{error}=await SB.from('products').update({is_active:active}).eq('id',productId);
+      if(error)throw new Error(safeMsg(error));
+    }
+    toast(active?'商品を表示に戻しました':'商品を非表示にしました');
+    render();
+  }catch(err){toast('更新失敗: '+safeMsg(err),true);}
+}
+
+async function deleteProduct(productId){
+  if(!confirm('この商品を削除しますか？\n削除後は元に戻せません。非表示にする場合は「×」を押して非表示ボタンをご利用ください。'))return;
+  try{
+    PRODUCTS=PRODUCTS.filter(p=>p.id!==productId);
+    delete PSV[productId];
+    if(isReady&&SB){
+      const{error}=await SB.from('products').delete().eq('id',productId);
+      if(error)throw new Error(safeMsg(error));
+    }
+    closeModal();
+    toast('商品を削除しました');
+    render();
+  }catch(err){toast('削除失敗: '+safeMsg(err),true);}
+}
+
+/* ── カテゴリーモーダル ── */
+function openCatModal(catId){
+  const c=catId?CATS.find(x=>x.id===catId):null;
+  S.modal={type:'category',data:{c}};
+  render();
+}
+
+function modalCategory(d){
+  const c=d.c,isNew=!c;
+  return`<div class="modal-bg">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="mh">
+        <div class="mt">${isNew?'カテゴリーを追加':'カテゴリーを編集'}</div>
+        <button class="xcl" onclick="closeModal()"><i class="ti ti-x"></i></button>
+      </div>
+      <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+        <div>
+          <label class="fl">カテゴリー名 <span style="color:var(--rd)">*</span></label>
+          <input type="text" class="fi" id="cm-name" value="${e(c?c.name:'')}" placeholder="例：肉類">
+        </div>
+        <div>
+          <label class="fl">表示順（数字が小さいほど上）</label>
+          <input type="number" class="fi" id="cm-ord" value="${c?c.display_order:10}" min="0" step="10">
+        </div>
+        <div id="cm-err" style="min-height:4px"></div>
+        <button class="btn bg" id="cm-save" onclick="saveCat(${c?c.id:'null'})">
+          <i class="ti ti-device-floppy"></i>${isNew?'追加する':'保存する'}
+        </button>
+        ${!isNew?`<button class="btn brd" onclick="deleteCat(${c.id})"><i class="ti ti-trash"></i>削除する</button>`:''}
+        <button class="btn bgy" onclick="closeModal()"><i class="ti ti-arrow-left"></i>キャンセル</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function saveCat(catId){
+  const name=($('cm-name').value||'').trim();
+  const ord=parseInt($('cm-ord').value)||10;
+  const errEl=$('cm-err');
+  if(!name){errEl.innerHTML=`<div class="al ae"><i class="ti ti-alert-circle"></i><span>カテゴリー名を入力してください</span></div>`;return;}
+  const btn=$('cm-save');if(btn)btn.disabled=true;
+  try{
+    if(!isReady||!SB){
+      if(catId){const idx=CATS.findIndex(c=>c.id===catId);if(idx>=0)CATS[idx]={...CATS[idx],name,display_order:ord};}
+      else CATS.push({id:Date.now(),name,display_order:ord,is_active:true});
+    }else{
+      if(catId){
+        const{error}=await SB.from('categories').update({name,display_order:ord}).eq('id',catId);
+        if(error)throw new Error(safeMsg(error));
+      }else{
+        const{error}=await SB.from('categories').insert({name,display_order:ord,is_active:true});
+        if(error)throw new Error(safeMsg(error));
+      }
+      await reloadMaster();
+    }
+    closeModal();toast(catId?'カテゴリーを更新しました':'カテゴリーを追加しました');render();
+  }catch(err){if(btn)btn.disabled=false;errEl.innerHTML=`<div class="al ae"><i class="ti ti-alert-circle"></i><span>${e(safeMsg(err))}</span></div>`;}
+}
+
+async function deleteCat(catId){
+  if(!confirm('このカテゴリーを削除しますか？\nこのカテゴリーの商品は「その他」になります。'))return;
+  try{
+    CATS=CATS.filter(c=>c.id!==catId);
+    if(isReady&&SB){const{error}=await SB.from('categories').delete().eq('id',catId);if(error)throw new Error(safeMsg(error));}
+    closeModal();toast('カテゴリーを削除しました');render();
+  }catch(err){toast('削除失敗: '+safeMsg(err),true);}
+}
+
+/* ── 店舗別商品設定モーダル ── */
+function openStoreProducts(storeId){
+  S.modal={type:'store_products',data:{storeId}};
+  render();
+}
+
+function modalStoreProducts(d){
+  const store=STORES.find(s=>s.id===d.storeId);
+  const prods=PRODUCTS.filter(p=>p.is_active!==false);
+  const visIds=prods.filter(p=>{const v=PSV[p.id];return!v||v.length===0||v.includes(d.storeId);}).map(p=>p.id);
+  const catMap={};CATS.forEach(c=>{catMap[c.id]=c;});
+  const catIds=[...new Set(prods.map(p=>p.category_id))];
+  return`<div class="modal-bg">
+    <div class="modal" onclick="event.stopPropagation()" style="max-height:95vh">
+      <div class="mh">
+        <div><div class="mt">${e(store?store.name:'')} の商品設定</div>
+          <div style="font-size:12px;color:var(--m);margin-top:2px">チェックした商品がこの店舗の発注画面に表示されます</div></div>
+        <button class="xcl" onclick="closeModal()"><i class="ti ti-x"></i></button>
+      </div>
+      <div style="padding:8px 12px;display:flex;gap:8px">
+        <button class="btn bg bsm" onclick="saveStoreProds(${d.storeId})"><i class="ti ti-device-floppy"></i>保存する</button>
+        <button class="btn bgy bsm" onclick="closeModal()">キャンセル</button>
+      </div>
+      ${catIds.map(catId=>{
+        const cat=catMap[catId]||{name:'その他'};
+        const ps=prods.filter(p=>p.category_id===catId);
+        return`<div class="sl2">${e(cat.name)}</div>
+        <div class="card" style="margin-top:0">
+          ${ps.map(p=>{const vis=visIds.includes(p.id);return`
+          <div class="pi">
+            <label style="display:flex;align-items:center;gap:10px;flex:1;cursor:pointer">
+              <input type="checkbox" id="sv-${p.id}" ${vis?'checked':''} style="width:20px;height:20px;flex-shrink:0">
+              <div><div class="pn">${e(p.name)}</div><div class="pu">${e(p.unit)}</div></div>
+            </label>
+          </div>`;}).join('')}
+        </div>`;}).join('')}
+      <div id="spm-err" style="padding:0 12px;min-height:4px"></div>
+      <div style="padding:12px;display:flex;gap:8px">
+        <button class="btn bg bsm" onclick="saveStoreProds(${d.storeId})" style="flex:1"><i class="ti ti-device-floppy"></i>保存する</button>
+        <button class="btn bgy bsm" onclick="closeModal()" style="flex:1">キャンセル</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function saveStoreProds(storeId){
+  const errEl=$('spm-err');
+  // 選択された商品IDを収集
+  const selected=PRODUCTS.filter(p=>p.is_active!==false&&$(`sv-${p.id}`)&&$(`sv-${p.id}`).checked).map(p=>p.id);
+  try{
+    if(!isReady||!SB){
+      // デモ: PSVを更新
+      PRODUCTS.filter(p=>p.is_active!==false).forEach(p=>{
+        const cur=PSV[p.id]||[...STORES.map(s=>s.id)];
+        if(selected.includes(p.id)){if(!cur.includes(storeId))cur.push(storeId);}
+        else{const idx=cur.indexOf(storeId);if(idx>=0)cur.splice(idx,1);}
+        PSV[p.id]=cur;
+      });
+    }else{
+      // Supabase: この店舗の全PSVを削除して再挿入
+      await SB.from('product_store_visibility').delete().eq('store_id',storeId);
+      if(selected.length){
+        const rows=selected.map(pid=>({product_id:pid,store_id:storeId,is_visible:true}));
+        const{error}=await SB.from('product_store_visibility').insert(rows);
+        if(error)throw new Error(safeMsg(error));
+      }
+      await reloadMaster();
+    }
+    closeModal();toast(`${STORES.find(s=>s.id===storeId)?.name||''}の商品設定を保存しました`);render();
+  }catch(err){
+    if(errEl)errEl.innerHTML=`<div class="al ae"><i class="ti ti-alert-circle"></i><span>${e(safeMsg(err))}</span></div>`;
+  }
+}
+
+/* ══════════════════════════════════════════
    SHARED
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+══════════════════════════════════════════ */
 function lbtn(){return`<button onclick="doOut()" style="border:1px solid var(--br);border-radius:8px;padding:8px 12px;background:#fff;color:var(--m);font-size:13px;cursor:pointer;display:flex;align-items:center;gap:5px;font-weight:500"><i class="ti ti-logout" style="font-size:16px"></i>ログアウト</button>`;}
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+/* ══════════════════════════════════════════
    ACTIONS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+══════════════════════════════════════════ */
 function doOut(){
   if(autoTimer){clearInterval(autoTimer);autoTimer=null;}
   if(dateTimer){clearInterval(dateTimer);dateTimer=null;}
-  S={view:'login',role:null,storeId:null,phase:'home',qty:{},memo:'',ckTab:0,
-    catOpen:{meat:true,veg:true,rice:true,frozen:false,sauce:false,supply:false},
-    detail:null,submitting:false,todayOrders:[],ckChecked:{},showHist:false,histOrders:[],
-    adminOrders:[],adminTab:0,af:{from:'',to:'',sid:'',status:'',kw:''}};
+  if(realtimeCh&&SB){try{SB.removeChannel(realtimeCh);}catch(_){}realtimeCh=null;}
+  S={view:'login',role:null,storeId:null,phase:'home',qty:{},memo:'',catOpen:{},ckTab:0,
+    detail:null,ckChecked:{},showHist:false,histOrders:[],todayOrders:[],
+    adminTab:0,adminOrders:[],af:{from:'',to:'',sid:'',catId:'',status:'',kw:''},
+    submitting:false,modal:null,bootError:''};
   render();
 }
 function go(ph){S.phase=ph;render();}
 function inc(id,min){S.qty[id]=Math.round(((S.qty[id]||0)+min)*1000)/1000;render();}
 function dec(id,min){S.qty[id]=Math.max(0,Math.round(((S.qty[id]||0)-min)*1000)/1000);render();}
 function setQ(id,v,min){const n=parseFloat(v)||0;S.qty[id]=Math.max(0,Math.round(n/min)*min);render();}
-function cp(){S.qty={1:2,2:1.5,3:3,5:5,6:3,9:10,10:2,11:2,13:1,14:1,16:1,17:20};toast('前回発注をコピーしました');render();}
+function cp(){S.qty={};const prods=productsForStore(S.storeId);prods.slice(0,8).forEach(p=>{S.qty[p.id]=p.min_qty||1;});toast('前回発注をコピーしました（デフォルト値）');render();}
 function cpA(){cp();S.phase='order';render();}
 function goC(){const m=$('mi');if(m)S.memo=m.value.trim();S.phase='confirm';render();}
 
@@ -1407,14 +1592,14 @@ async function doSub(){
   S.submitting=true;const btn=$('sub');if(btn)btn.disabled=true;
   showL('発注をCKに送信中…');
   const items=PRODUCTS.filter(p=>(S.qty[p.id]||0)>0).map(p=>({product_id:p.id,product_name:p.name,quantity:S.qty[p.id],unit:p.unit}));
-  const late=isLate(), st=SD();
+  const late=isLate(),st=SD();
   const pl={store_id:S.storeId,store_name:st.name,order_date:jst.iso,status:late?'late':'ordered',memo:S.memo||'',is_late:late,created_by:st.manager_name||'店長'};
   try{
     if(isReady&&SB){
-      const {data:ord,error:e1}=await SB.from('orders').insert(pl).select();
-      if(e1)throw e1;
+      const{data:ord,error:e1}=await SB.from('orders').insert(pl).select();
+      if(e1)throw new Error(safeMsg(e1));
       const oid=ord[0].id;
-      if(items.length){const {error:e2}=await SB.from('order_items').insert(items.map(i=>({...i,order_id:oid})));if(e2)throw e2;}
+      if(items.length){const{error:e2}=await SB.from('order_items').insert(items.map(i=>({...i,order_id:oid})));if(e2)throw new Error(safeMsg(e2));}
       S.todayOrders=S.todayOrders.filter(o=>o.store_id!==S.storeId);
       S.todayOrders.push({...ord[0],items:items.map(i=>({product_name:i.product_name,quantity:i.quantity,unit:i.unit}))});
     }else{
@@ -1424,7 +1609,7 @@ async function doSub(){
     hideL();S.submitting=false;S.phase='success';render();
   }catch(err){
     hideL();S.submitting=false;if(btn)btn.disabled=false;render();
-    toast('発注の送信に失敗しました。\n通信環境を確認してもう一度送信してください。\n（'+jp(err).split('\n')[0]+'）',true);
+    toast('発注の送信に失敗しました。\n通信環境を確認してもう一度送信してください。\n（'+safeMsg(err)+'）',true);
   }
 }
 
@@ -1434,25 +1619,26 @@ async function doNo(){
   const pl={store_id:S.storeId,store_name:st.name,order_date:jst.iso,status:'no_order',memo:'',is_late:false,created_by:st.manager_name||'店長'};
   try{
     if(isReady&&SB){
-      const {data:ord,error}=await SB.from('orders').insert(pl).select();if(error)throw error;
+      const{data:ord,error}=await SB.from('orders').insert(pl).select();
+      if(error)throw new Error(safeMsg(error));
       S.todayOrders=S.todayOrders.filter(o=>o.store_id!==S.storeId);S.todayOrders.push({...ord[0],items:[]});
     }else{
       const d={id:'d'+Date.now(),...pl,created_at:new Date().toISOString(),items:[]};
       S.todayOrders=S.todayOrders.filter(o=>o.store_id!==S.storeId);S.todayOrders.push(d);
     }
     hideL();S.submitting=false;S.phase='noorder_done';render();
-  }catch(err){hideL();S.submitting=false;render();toast('送信失敗: '+jp(err).split('\n')[0],true);}
+  }catch(err){hideL();S.submitting=false;render();toast('送信失敗: '+safeMsg(err),true);}
 }
 
 async function ckR(id){
   S.ckChecked[id+'_r']=true;
-  if(isReady&&SB){const {error}=await SB.from('orders').update({status:'ck_confirmed',ck_ready_at:new Date().toISOString()}).eq('id',id);if(!error){const o=S.todayOrders.find(x=>x.id===id);if(o)o.status='ck_confirmed';}}
+  if(isReady&&SB){const{error}=await SB.from('orders').update({status:'ck_confirmed',ck_ready_at:new Date().toISOString()}).eq('id',id);if(!error){const o=S.todayOrders.find(x=>x.id===id);if(o)o.status='ck_confirmed';}}
   else{const o=S.todayOrders.find(x=>x.id===id);if(o)o.status='ck_confirmed';}
   render();
 }
 async function ckS(id){
   S.ckChecked[id+'_r']=true;S.ckChecked[id+'_s']=true;
-  if(isReady&&SB){const {error}=await SB.from('orders').update({status:'shipped',shipped_at:new Date().toISOString()}).eq('id',id);if(!error){const o=S.todayOrders.find(x=>x.id===id);if(o)o.status='shipped';}}
+  if(isReady&&SB){const{error}=await SB.from('orders').update({status:'shipped',shipped_at:new Date().toISOString()}).eq('id',id);if(!error){const o=S.todayOrders.find(x=>x.id===id);if(o)o.status='shipped';}}
   else{const o=S.todayOrders.find(x=>x.id===id);if(o)o.status='shipped';}
   render();
 }
@@ -1460,14 +1646,13 @@ async function ckS(id){
 async function opH(){showL('過去の履歴を読み込み中…');await fetchHist();hideL();S.showHist=true;render();}
 async function doRef(){showL('最新データを取得中…');await fetchToday();hideL();render();toast('更新しました');}
 async function adRef(){showL('データを読み込み中…');await fetchAdmin();hideL();render();toast('更新しました');}
-
-function clrF(){const t=jst.iso,mo=new Date();mo.setDate(mo.getDate()-30);S.af={from:mo.toISOString().slice(0,10),to:t,sid:'',status:'',kw:''};render();}
+function clrF(){const t=jst.iso,mo=new Date();mo.setDate(mo.getDate()-30);S.af={from:mo.toISOString().slice(0,10),to:t,sid:'',catId:'',status:'',kw:''};render();}
 
 function doCSV(){
   const rows=[['発注日','店舗名','商品名','数量','単位','ステータス','締切後','メモ','発注時間','CK確認','出荷']];
   S.adminOrders.forEach(o=>{
     const t=new Date(o.created_at).toLocaleTimeString('ja-JP',{timeZone:'Asia/Tokyo',hour:'2-digit',minute:'2-digit'});
-    const sl=sMeta(o.status).l, ck=o.status==='ck_confirmed'||o.status==='shipped'?'済':'未', sh=o.status==='shipped'?'済':'未';
+    const sl=sMeta(o.status).l,ck=o.status==='ck_confirmed'||o.status==='shipped'?'済':'未',sh=o.status==='shipped'?'済':'未';
     if(!o.items||!o.items.length)rows.push([o.order_date,o.store_name,'（発注なし）','','',sl,o.is_late?'はい':'いいえ',o.memo||'',t,ck,sh]);
     else o.items.forEach(i=>rows.push([o.order_date,o.store_name,i.product_name,i.quantity,i.unit,sl,o.is_late?'はい':'いいえ',o.memo||'',t,ck,sh]));
   });
@@ -1477,24 +1662,23 @@ function doCSV(){
   URL.revokeObjectURL(url);toast('CSVをダウンロードしました（'+rows.length+'行）');
 }
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+/* ══════════════════════════════════════════
    起動処理
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+══════════════════════════════════════════ */
 (async function boot(){
-  // コードに直書きされた値 OR localStorage保存済みの値を使う
-  const saved = lCfg();
-  const url = cleanUrl(SUPABASE_URL || saved.url || '');
-  const key = ((SUPABASE_ANON_KEY||'').trim().replace(/\s/g,'')) || ((saved.anonKey||'').trim());
-
-  if(url && key){
-    showL('Supabaseに接続中…');
-    const r = await initSB(url, key);
+  const saved=lCfg();
+  const codeUrl=cleanUrl(SUPABASE_URL||'');
+  const codeKey=((SUPABASE_ANON_KEY||'').trim().replace(/\s/g,''));
+  const url=codeUrl||cleanUrl(saved.url||'');
+  const key=codeKey||(saved.anonKey||'').trim();
+  if(url&&key){
+    showL('Supabaseに自動接続中…');
+    const r=await initSB(url,key);
     hideL();
-    if(r.ok){
-      sCfg(url, key);
-      S.view = 'login';
-    }
-    // 接続失敗でもsetup画面を表示（理由をユーザーが確認できる）
+    if(r.ok){sCfg(url,key);S.view='login';}
+    else{S.view='setup';S.bootError=jp(r.errorMsg||'不明なエラー');}
+  }else{
+    S.view='setup';
   }
   startDW();
   render();
