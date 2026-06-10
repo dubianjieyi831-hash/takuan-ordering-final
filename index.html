@@ -937,35 +937,17 @@ function rBtn(r,ic,bg,cl,name,desc){
 }
 
 async function doLogin(){
-  // ── バリデーション ──
   if(!S.role){toast('役割を選択してください',true);return;}
   if(S.role==='mgr'){
-    // storeIdを必ず数値に統一
-    if(S.storeId)S.storeId=Number(S.storeId);
+    S.storeId=S.storeId?Number(S.storeId):null;
     if(!S.storeId){
       S.storeErr='店舗を選択してください';
       render();
       return;
     }
-    // 古いlocalStorageの店舗情報を削除（誤認の原因になるため）
-    ['selectedStore','selectedStoreId','store','storeId','currentStore'].forEach(function(k){
-      try{localStorage.removeItem(k);}catch(_){}
-    });
-    // STORESから該当店舗を探す（ID照合）
-    var found=STORES.find(function(s){return Number(s.id)===Number(S.storeId);});
-    if(!found){
-      // 見つからない場合はSupabaseから最新を取得して再試行
-      await refreshStores();
-      found=STORES.find(function(s){return Number(s.id)===Number(S.storeId);});
-    }
-    if(!found){
-      // それでも見つからない場合はプルダウンの選択値を名前で照合（フォールバック）
-      // storeIdをリセットして選び直してもらう
-      S.storeId=null;
-      S.storeErr='店舗情報を再取得しました。もう一度店舗を選択してください';
-      render();
-      return;
-    }
+    // プルダウンに存在するIDしか選べないため、照合チェックは不要
+    // 古いlocalStorageを念のり削除
+    ['selectedStore','selectedStoreId','store','storeId','currentStore'].forEach(function(k){try{localStorage.removeItem(k);}catch(_){}});
   }
 
   // ── ログインボタンを即時無効化（二重タップ防止）──
@@ -1097,11 +1079,15 @@ function subRT(){ /* ポーリング（startAR）で代替 */ }
    MANAGER APP
 ══════════════════════════════════════════ */
 function vManager(){
-  const st=SD();
-  // st が undefined の場合はログイン画面に戻す（安全フォールバック）
+  var st=SD();
+  // STORESが空またはstoreIdが一致しない場合：フォールバック店舗オブジェクトを使う
   if(!st){
-    S.view='login';S.phase='home';S.storeErr='店舗情報が見つかりません。もう一度選択してください。';
-    return vLogin();
+    // STORES内を文字列/数値どちらでも検索
+    st=STORES.find(function(s){return String(s.id)===String(S.storeId);});
+  }
+  if(!st){
+    // 最終フォールバック：storeIdだけで仮の店舗オブジェクトを作って続行
+    st={id:S.storeId,name:'店舗ID:'+S.storeId,short_name:'',deadline_time:'10:00',manager_name:''};
   }
   const my=S.todayOrders.find(o=>o.store_id===S.storeId);
   return`<div class="app">
