@@ -661,21 +661,21 @@ function render(){
       :S.view==='ck'    ?vCK()
       :vAdmin();
     $('root').innerHTML=html;
-    // モーダル：既存を削除してから新しく追加
     const old=$('modal-container');
     if(old)old.remove();
     if(S.modal)renderModal();
   }catch(renderErr){
-    // レンダリングエラー時は安全にログイン画面に戻す
     const msg=safeMsg(renderErr);
     console.error('render error:',msg);
+    // ログアウトしない。エラーメッセージだけ表示して現在のviewを維持する
     try{
-      S.view='login';S.modal=null;
-      $('root').innerHTML=vLogin();
-    }catch(_){
-      // 最終フォールバック
-      try{$('root').innerHTML='<div style="padding:24px;text-align:center;color:#E24B4A"><i class="ti ti-alert-circle" style="font-size:48px;display:block;margin-bottom:12px"></i><div style="font-size:16px;font-weight:600;margin-bottom:8px">表示エラーが発生しました</div><div style="font-size:13px;margin-bottom:16px">'+e(msg)+'</div><button onclick="location.reload()" style="background:#1D9E75;color:#fff;border:none;border-radius:8px;padding:12px 20px;font-size:14px;cursor:pointer">ページを再読み込み</button></div>';}catch(_){}
-    }
+      $('root').innerHTML='<div style="padding:24px;text-align:center;color:#E24B4A">'
+        +'<i class="ti ti-alert-circle" style="font-size:48px;display:block;margin-bottom:12px"></i>'
+        +'<div style="font-size:16px;font-weight:600;margin-bottom:8px">表示エラーが発生しました</div>'
+        +'<div style="font-size:13px;margin-bottom:16px">'+e(msg)+'</div>'
+        +'<button onclick="location.reload()" style="background:#1D9E75;color:#fff;border:none;border-radius:8px;padding:12px 20px;font-size:14px;cursor:pointer">ページを再読み込み</button>'
+        +'</div>';
+    }catch(_){}
   }
 }
 
@@ -1080,15 +1080,8 @@ function subRT(){ /* ポーリング（startAR）で代替 */ }
 ══════════════════════════════════════════ */
 function vManager(){
   var st=SD();
-  // STORESが空またはstoreIdが一致しない場合：フォールバック店舗オブジェクトを使う
-  if(!st){
-    // STORES内を文字列/数値どちらでも検索
-    st=STORES.find(function(s){return String(s.id)===String(S.storeId);});
-  }
-  if(!st){
-    // 最終フォールバック：storeIdだけで仮の店舗オブジェクトを作って続行
-    st={id:S.storeId,name:'店舗ID:'+S.storeId,short_name:'',deadline_time:'10:00',manager_name:''};
-  }
+  if(!st) st=STORES.find(function(s){return String(s.id)===String(S.storeId);});
+  if(!st) st={id:S.storeId,name:'店舗ID:'+S.storeId,short_name:'',deadline_time:'10:00',manager_name:''};
   const my=S.todayOrders.find(o=>o.store_id===S.storeId);
   return`<div class="app">
     <div class="bar">
