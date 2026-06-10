@@ -537,15 +537,17 @@ async function initSB(url, key) {
 
 // マスターデータ（stores/categories/products/PSV）を取得
 async function _loadMaster() {
-  // stores
+  var h={'Content-Type':'application/json','apikey':_sbKey,'Authorization':'Bearer '+_sbKey};
+  // stores（safeFetch直接使用でSBQueryのthen問題を回避）
   try {
-    const r = await SB.from('stores').select('*').eq('is_active', true).order('display_order').limit(100);
-    if (!r.error && r.data && r.data.length > 0) {
-      STORES = r.data;
-    } else {
-      // is_activeフィルタなしで再試行
-      const r2 = await SB.from('stores').select('*').limit(100);
-      if (!r2.error && r2.data && r2.data.length > 0) STORES = r2.data;
+    var rs=await safeFetch(_sbUrl+'/rest/v1/stores?select=*&is_active=eq.true&order=display_order.asc&limit=100',{method:'GET',headers:h});
+    if(!rs.errMsg&&rs.ok){
+      var ds=JSON.parse(rs.body||'[]');
+      if(Array.isArray(ds)&&ds.length>0){STORES=ds;}
+      else{
+        var rs2=await safeFetch(_sbUrl+'/rest/v1/stores?select=*&order=display_order.asc&limit=100',{method:'GET',headers:h});
+        if(!rs2.errMsg&&rs2.ok){var ds2=JSON.parse(rs2.body||'[]');if(Array.isArray(ds2)&&ds2.length>0)STORES=ds2;}
+      }
     }
   } catch (_) {}
 
@@ -830,25 +832,23 @@ function doDemo(){isReady=false;_sbUrl='';_sbKey='';S.view='login';render();}
 ══════════════════════════════════════════ */
 async function refreshStores(){
   if(!isReady)return;
+  // SBQueryのthenチェーン問題を避けるため、safeFetchを直接使う
+  var h={'Content-Type':'application/json','apikey':_sbKey,'Authorization':'Bearer '+_sbKey};
   try{
-    // display_orderがある場合・ない場合の両方に対応
-    let res=await SB.from('stores').select('*').eq('is_active',true).order('display_order');
-    if(res.error){
-      // display_orderカラムがない場合はorderなしで再取得
-      res=await SB.from('stores').select('*').eq('is_active',true);
+    // まずis_active=trueで取得を試みる
+    var r=await safeFetch(_sbUrl+'/rest/v1/stores?select=*&is_active=eq.true&order=display_order.asc&limit=100',{method:'GET',headers:h});
+    if(!r.errMsg&&r.ok){
+      var d=JSON.parse(r.body||'[]');
+      if(Array.isArray(d)&&d.length>0){STORES=d;return;}
     }
-    if(!res.error&&res.data){
-      if(res.data.length>0){
-        STORES=res.data;
-      }else{
-        // is_active=trueで0件ならフィルタなしで試す
-        const res2=await SB.from('stores').select('*');
-        if(!res2.error&&res2.data&&res2.data.length>0)STORES=res2.data;
-        else STORES=[];
-      }
+    // 0件またはエラーならフィルタなしで再取得
+    var r2=await safeFetch(_sbUrl+'/rest/v1/stores?select=*&order=display_order.asc&limit=100',{method:'GET',headers:h});
+    if(!r2.errMsg&&r2.ok){
+      var d2=JSON.parse(r2.body||'[]');
+      if(Array.isArray(d2)&&d2.length>0)STORES=d2;
     }
-  }catch(e){
-    console.warn('stores再取得失敗',safeMsg(e));
+  }catch(ex){
+    console.warn('stores再取得失敗',safeMsg(ex));
   }
 }
 
@@ -947,17 +947,24 @@ async function doLogin(){
       render();
       return;
     }
-    // Number()で型を合わせて比較（Supabaseから取得したidがstring/numberどちらでも対応）
-    const storeExists=STORES.find(s=>Number(s.id)===Number(S.storeId));
-    if(!storeExists){
-      // STORESが空または一致しない場合、再取得を試みてもう一度確認
+    // 古いlocalStorageの店舗情報を削除（誤認の原因になるため）
+    ['selectedStore','selectedStoreId','store','storeId','currentStore'].forEach(function(k){
+      try{localStorage.removeItem(k);}catch(_){}
+    });
+    // STORESから該当店舗を探す（ID照合）
+    var found=STORES.find(function(s){return Number(s.id)===Number(S.storeId);});
+    if(!found){
+      // 見つからない場合はSupabaseから最新を取得して再試行
       await refreshStores();
-      const storeExists2=STORES.find(s=>Number(s.id)===Number(S.storeId));
-      if(!storeExists2){
-        S.storeErr='選択した店舗が見つかりません。再読み込みして選び直してください。';
-        render();
-        return;
-      }
+      found=STORES.find(function(s){return Number(s.id)===Number(S.storeId);});
+    }
+    if(!found){
+      // それでも見つからない場合はプルダウンの選択値を名前で照合（フォールバック）
+      // storeIdをリセットして選び直してもらう
+      S.storeId=null;
+      S.storeErr='店舗情報を再取得しました。もう一度店舗を選択してください';
+      render();
+      return;
     }
   }
 
