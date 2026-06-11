@@ -1697,7 +1697,7 @@ function modalProduct(d){
           <label class="fl">カテゴリー <span style="color:var(--rd)">*</span></label>
           <select class="fsel" id="pm-cat" style="margin-bottom:0">
             <option value="">カテゴリーを選択</option>
-            ${cats.map(c=>`<option value="${c.id}"${p&&p.category_id===c.id?' selected':''}>${e(c.name)}</option>`).join('')}
+            ${cats.map(c=>`<option value="${c.id}"${p&&String(p.category_id)===String(c.id)?' selected':''}>${e(c.name)}</option>`).join('')}
           </select>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
@@ -1741,7 +1741,7 @@ function modalProduct(d){
           </div>
         </div>
         <div id="pm-err" style="min-height:4px"></div>
-        <button class="btn bg" id="pm-save" onclick="saveProduct(${p?p.id:'null'})">
+        <button class="btn bg" id="pm-save" onclick="saveProduct(${p?p.id:0})">
           <i class="ti ti-device-floppy"></i>${isNew?'商品を追加する':'変更を保存する'}
         </button>
         ${!isNew?`<button class="btn brd" onclick="deleteProduct(${p.id})"><i class="ti ti-trash"></i>この商品を削除する</button>`:''}
@@ -1773,54 +1773,68 @@ function selAllStores(sel){
 }
 
 async function saveProduct(productId){
-  const name=($('pm-name').value||'').trim();
-  const catId=parseInt($('pm-cat').value)||0;
-  const unit=($('pm-unit').value||'').trim();
-  const minQty=parseFloat($('pm-min').value)||1;
-  const dispOrd=parseInt($('pm-ord').value)||10;
-  const memo=($('pm-memo').value||'').trim();
-  const freq=$('pm-freq').checked;
+  // productIdを確実に数値またはnullに正規化
+  const pid = (productId && productId !== 'null' && productId !== 0) ? Number(productId) : null;
+
+  // DOM要素を安全に取得
+  const nameEl=$('pm-name'), catEl=$('pm-cat'), unitEl=$('pm-unit');
+  const minEl=$('pm-min'), ordEl=$('pm-ord'), memoEl=$('pm-memo'), freqEl=$('pm-freq');
   const errEl=$('pm-err');
 
+  // DOM取得失敗時のガード
+  if(!nameEl||!catEl||!unitEl||!errEl){
+    alert('フォームの読み込みに失敗しました。画面を再読み込みしてください。');return;
+  }
+
+  const name=(nameEl.value||'').trim();
+  const catRaw=(catEl.value||'').trim();
+  const unit=(unitEl.value||'').trim();
+  const minQty=parseFloat(minEl?minEl.value:1)||1;
+  const dispOrd=parseInt(ordEl?ordEl.value:10)||10;
+  const memo=(memoEl?memoEl.value||'':'').trim();
+  const freq=freqEl?freqEl.checked:false;
+
+  // バリデーション（catRawが空文字のときだけエラー）
   if(!name){errEl.innerHTML=`<div class="al ae"><i class="ti ti-alert-circle"></i><span>商品名を入力してください</span></div>`;return;}
-  if(!catId){errEl.innerHTML=`<div class="al ae"><i class="ti ti-alert-circle"></i><span>カテゴリーを選択してください</span></div>`;return;}
+  if(!catRaw||catRaw===''){errEl.innerHTML=`<div class="al ae"><i class="ti ti-alert-circle"></i><span>カテゴリーを選択してください</span></div>`;return;}
   if(!unit){errEl.innerHTML=`<div class="al ae"><i class="ti ti-alert-circle"></i><span>単位を入力してください</span></div>`;return;}
 
-  // チェックボックスから最新の表示店舗を取得
+  // カテゴリーをCATSから検索（String比較で型非依存）
+  const cat=CATS.find(c=>String(c.id)===String(catRaw));
+  const catId=cat?cat.id:(Number(catRaw)||catRaw);
+  const catName=cat?cat.name:catRaw;
+
+  // 表示店舗チェックボックスを取得
   const visStores=STORES.filter(s=>{const el=$(`pm-vis-${s.id}`);return el&&el.checked;}).map(s=>s.id);
-  const cat=CATS.find(c=>c.id===catId);
-  const payload={name,category_id:catId,category_name:cat?cat.name:'',unit,min_qty:minQty,display_order:dispOrd,memo,is_frequent:freq,is_active:true};
+
+  const payload={name,category_id:catId,category_name:catName,unit,min_qty:minQty,display_order:dispOrd,memo,is_frequent:freq,is_active:true};
 
   const btn=$('pm-save');if(btn)btn.disabled=true;
   errEl.innerHTML=`<div class="cbox cif"><div class="sp spsm"></div><span>保存中…</span></div>`;
 
   try{
-    let savedId=productId;
+    let savedId=pid;
     if(!isReady){
-      // デモモード：ローカルデータを更新
-      if(productId){
-        const idx=PRODUCTS.findIndex(p=>p.id===productId);
+      // デモモード
+      if(pid){
+        const idx=PRODUCTS.findIndex(p=>Number(p.id)===pid);
         if(idx>=0)PRODUCTS[idx]={...PRODUCTS[idx],...payload};
       }else{
         const newId=Date.now();
         PRODUCTS.push({id:newId,...payload});
         savedId=newId;
       }
-      // PSVもローカル更新
       if(savedId){
         if(visStores.length)PSV[savedId]=visStores;
         else delete PSV[savedId];
       }
     }else{
       // Supabase保存
-      if(productId){
-        // 更新：updated_atも含める
-        const updatePayload={...payload,updated_at:new Date().toISOString()};
-        const{error}=await SB.from('products').update(updatePayload).eq('id',productId);
+      if(pid){
+        const{error}=await SB.from('products').update({...payload,updated_at:new Date().toISOString()}).eq('id',pid);
         if(error)throw new Error(safeMsg(error));
-        savedId=productId;
+        savedId=pid;
       }else{
-        // 新規挿入
         const{data,error}=await SB.from('products').insert(payload).select();
         if(error)throw new Error(safeMsg(error));
         if(data&&data.length)savedId=data[0].id;
@@ -1835,19 +1849,15 @@ async function saveProduct(productId){
           if(pe)console.warn('PSV保存失敗',safeMsg(pe));
         }
       }
-      // マスターデータ再読み込み
       await reloadMaster();
     }
-
-    // モーダルを閉じて商品管理タブに戻る
-    S.modal=null;
-    S.adminTab=1; // 商品管理タブ
+    S.modal=null;S.adminTab=1;
     const mc=$('modal-container');if(mc)mc.remove();
-    toast(productId?'商品を更新しました':'商品を追加しました');
+    toast(pid?'商品を更新しました':'商品を追加しました');
     render();
   }catch(err){
     if(btn)btn.disabled=false;
-    errEl.innerHTML=`<div class="al ae"><i class="ti ti-alert-circle"></i><span>${e(safeMsg(err))}</span></div>`;
+    if(errEl)errEl.innerHTML=`<div class="al ae"><i class="ti ti-alert-circle"></i><span>${e(safeMsg(err))}</span></div>`;
   }
 }
 
