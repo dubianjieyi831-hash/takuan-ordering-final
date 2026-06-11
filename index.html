@@ -573,8 +573,11 @@ async function _loadMaster() {
     if (!r.error && r.data) {
       PSV = {};
       r.data.filter(row => row.is_visible).forEach(row => {
-        if (!PSV[row.product_id]) PSV[row.product_id] = [];
-        PSV[row.product_id].push(row.store_id);
+        // キーと値を数値に統一してtype mismatchを防ぐ
+        const pid = Number(row.product_id);
+        const sid = Number(row.store_id);
+        if(!PSV[pid]) PSV[pid] = [];
+        PSV[pid].push(sid);
       });
     }
   } catch (_) {}
@@ -622,9 +625,10 @@ function productsForStore(storeId){
   if(!hasPSV)return PRODUCTS.filter(p=>p.is_active!==false);
   return PRODUCTS.filter(p=>{
     if(p.is_active===false)return false;
-    const vis=PSV[p.id]||PSV[String(p.id)];
+    // PSVキーは数値に統一済み
+    const vis=PSV[Number(p.id)];
     if(!vis||vis.length===0)return true; // PSV未設定なら全店舗に表示
-    return vis.some(v=>Number(v)===sid);
+    return vis.includes(sid);            // 値も数値に統一済みなのでincludesで比較
   });
 }
 
@@ -1844,9 +1848,14 @@ async function saveProduct(productId){
       if(savedId){
         await SB.from('product_store_visibility').delete().eq('product_id',savedId);
         if(visStores.length){
-          const psvRows=visStores.map(sid=>({product_id:savedId,store_id:sid,is_visible:true}));
+          // store_idとproduct_idを確実に数値型で送る
+          const psvRows=visStores.map(sid=>({
+            product_id:Number(savedId),
+            store_id:Number(sid),
+            is_visible:true
+          }));
           const{error:pe}=await SB.from('product_store_visibility').insert(psvRows);
-          if(pe)console.warn('PSV保存失敗',safeMsg(pe));
+          if(pe)throw new Error('店舗別表示設定の保存に失敗しました: '+safeMsg(pe));
         }
       }
       await reloadMaster();
