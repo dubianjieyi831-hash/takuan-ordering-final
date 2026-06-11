@@ -350,7 +350,7 @@ class SBQuery {
 
   // Promiseとして評価
   then(resolve, reject) {
-    this._exec().then(resolve).catch(function(e) {
+    return this._exec().then(resolve).catch(function(e) {
       // 絶対にErrorオブジェクトをrejectに渡さない
       var msg = (e instanceof Error) ? e.message : String(e || 'エラー');
       resolve({ data: null, error: { message: msg } });
@@ -613,7 +613,7 @@ let S={
 const $=id=>document.getElementById(id);
 const e=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 const SD=()=>STORES.find(s=>Number(s.id)===Number(S.storeId));
-function isLate(){const st=SD();if(!st)return false;const[h,m]=st.deadline_time.split(':').map(Number);const n=new Date();return n.getHours()*60+n.getMinutes()>=h*60+m;}
+function isLate(){const st=SD();if(!st||!st.deadline_time)return false;const[h,m]=st.deadline_time.split(':').map(Number);const n=new Date();return n.getHours()*60+n.getMinutes()>=h*60+m;}
 
 // 店舗向けの商品リスト（PSVがあれば絞り込む、なければ全部）
 function productsForStore(storeId){
@@ -1004,7 +1004,7 @@ async function fetchToday(){
       if(e2)throw new Error(safeMsg(e2));
       items=ii||[];
     }
-    S.todayOrders=(orders||[]).map(o=>({...o,items:items.filter(i=>i.order_id===o.id)}));
+    S.todayOrders=(orders||[]).map(o=>({...o,store_id:Number(o.store_id),items:items.filter(i=>i.order_id===o.id)}));
   }catch(err){toast('データ取得エラー: '+safeMsg(err).split('\n')[0],true);S.todayOrders=demoOrders();}
 }
 
@@ -1082,12 +1082,12 @@ function vManager(){
   var st=SD();
   if(!st) st=STORES.find(function(s){return String(s.id)===String(S.storeId);});
   if(!st) st={id:S.storeId,name:'店舗ID:'+S.storeId,short_name:'',deadline_time:'10:00',manager_name:''};
-  const my=S.todayOrders.find(o=>o.store_id===S.storeId);
+  const my=S.todayOrders.find(o=>Number(o.store_id)===Number(S.storeId));
   return`<div class="app">
     <div class="bar">
       <i class="ti ti-truck-delivery" style="font-size:22px;color:var(--g)"></i>
       <div style="flex:1"><div class="bar-t">${e(st.name)}</div>
-        <div class="bar-s">締切：${st.deadline_time} ｜ ${jst.disp}</div></div>
+        <div class="bar-s">締切：${st.deadline_time||'--:--'} ｜ ${jst.disp}</div></div>
       ${lbtn()}
     </div>
     <div class="con">
@@ -1152,8 +1152,10 @@ function mOrder(){
   const catIds=[...new Set(prods.map(p=>p.category_id))];
   const catMap={};
   CATS.forEach(c=>{catMap[c.id]=c;});
-  let h=late?`<div class="al aw"><i class="ti ti-clock"></i><span>締切（${SD().deadline_time}）を過ぎています。締切後発注として記録されます。</span></div>`
-           :`<div class="al aok"><i class="ti ti-clock"></i><span>発注締切：本日 <strong>${SD().deadline_time}</strong> まで</span></div>`;
+  const _st=SD();
+  const _dl=(_st&&_st.deadline_time)||'--:--';
+  let h=late?`<div class="al aw"><i class="ti ti-clock"></i><span>締切（${_dl}）を過ぎています。締切後発注として記録されます。</span></div>`
+           :`<div class="al aok"><i class="ti ti-clock"></i><span>発注締切：本日 <strong>${_dl}</strong> まで</span></div>`;
 
   // 商品が0件の場合：メッセージを表示するが画面には入れる
   if(!prods.length){
@@ -2073,42 +2075,46 @@ async function doSub(){
   S.submitting=true;const btn=$('sub');if(btn)btn.disabled=true;
   showL('発注をCKに送信中…');
   const items=PRODUCTS.filter(p=>(S.qty[p.id]||0)>0).map(p=>({product_id:p.id,product_name:p.name,quantity:S.qty[p.id],unit:p.unit}));
-  const late=isLate(),st=SD();
-  const pl={store_id:S.storeId,store_name:st.name,order_date:jst.iso,status:late?'late':'ordered',memo:S.memo||'',is_late:late,created_by:st.manager_name||'店長'};
+  const late=isLate(),st=SD()||{id:S.storeId,name:'店舗'+S.storeId,manager_name:'店長'};
+  const pl={store_id:S.storeId,store_name:st.name||('店舗'+S.storeId),order_date:jst.iso,status:late?'late':'ordered',memo:S.memo||'',is_late:late,created_by:st.manager_name||'店長'};
   try{
     if(isReady){
       const{data:ord,error:e1}=await SB.from('orders').insert(pl).select();
       if(e1)throw new Error(safeMsg(e1));
+      if(!ord||!ord.length)throw new Error('発注レコードの保存に失敗しました（データが返りませんでした）');
       const oid=ord[0].id;
       if(items.length){const{error:e2}=await SB.from('order_items').insert(items.map(i=>({...i,order_id:oid})));if(e2)throw new Error(safeMsg(e2));}
-      S.todayOrders=S.todayOrders.filter(o=>o.store_id!==S.storeId);
-      S.todayOrders.push({...ord[0],items:items.map(i=>({product_name:i.product_name,quantity:i.quantity,unit:i.unit}))});
+      S.todayOrders=S.todayOrders.filter(o=>Number(o.store_id)!==Number(S.storeId));
+      S.todayOrders.push({...ord[0],store_id:Number(ord[0].store_id),items:items.map(i=>({product_name:i.product_name,quantity:i.quantity,unit:i.unit}))});
     }else{
       const d={id:'d'+Date.now(),...pl,created_at:new Date().toISOString(),items:items.map(i=>({product_name:i.product_name,quantity:i.quantity,unit:i.unit}))};
-      S.todayOrders=S.todayOrders.filter(o=>o.store_id!==S.storeId);S.todayOrders.push(d);
+      S.todayOrders=S.todayOrders.filter(o=>Number(o.store_id)!==Number(S.storeId));S.todayOrders.push(d);
     }
     hideL();S.submitting=false;S.phase='success';render();
   }catch(err){
-    hideL();S.submitting=false;if(btn)btn.disabled=false;render();
-    toast('発注の送信に失敗しました。\n通信環境を確認してもう一度送信してください。\n（'+safeMsg(err)+'）',true);
+    hideL();S.submitting=false;if(btn)btn.disabled=false;
+    toast('発注の送信に失敗しました。通信環境を確認してもう一度送信してください。（'+safeMsg(err)+'）',true);
+    render();
   }
 }
 
 async function doNo(){
   if(S.submitting)return;S.submitting=true;showL('CKに連絡中…');
-  const st=SD();
-  const pl={store_id:S.storeId,store_name:st.name,order_date:jst.iso,status:'no_order',memo:'',is_late:false,created_by:st.manager_name||'店長'};
+  const st=SD()||{id:S.storeId,name:'店舗'+S.storeId,manager_name:'店長'};
+  const pl={store_id:S.storeId,store_name:st.name||('店舗'+S.storeId),order_date:jst.iso,status:'no_order',memo:'',is_late:false,created_by:st.manager_name||'店長'};
   try{
     if(isReady){
       const{data:ord,error}=await SB.from('orders').insert(pl).select();
       if(error)throw new Error(safeMsg(error));
-      S.todayOrders=S.todayOrders.filter(o=>o.store_id!==S.storeId);S.todayOrders.push({...ord[0],items:[]});
+      if(!ord||!ord.length)throw new Error('発注なしレコードの保存に失敗しました');
+      S.todayOrders=S.todayOrders.filter(o=>Number(o.store_id)!==Number(S.storeId));
+      S.todayOrders.push({...ord[0],store_id:Number(ord[0].store_id),items:[]});
     }else{
       const d={id:'d'+Date.now(),...pl,created_at:new Date().toISOString(),items:[]};
-      S.todayOrders=S.todayOrders.filter(o=>o.store_id!==S.storeId);S.todayOrders.push(d);
+      S.todayOrders=S.todayOrders.filter(o=>Number(o.store_id)!==Number(S.storeId));S.todayOrders.push(d);
     }
     hideL();S.submitting=false;S.phase='noorder_done';render();
-  }catch(err){hideL();S.submitting=false;render();toast('送信失敗: '+safeMsg(err),true);}
+  }catch(err){hideL();S.submitting=false;toast('送信失敗: '+safeMsg(err),true);render();}
 }
 
 async function ckR(id){
