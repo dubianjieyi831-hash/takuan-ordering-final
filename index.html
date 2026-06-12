@@ -135,7 +135,7 @@ textarea.fi{resize:none;font-family:inherit;min-height:72px}
    Supabase → Settings → API から取得
 ======================================================== */
 var SB_URL = 'https://dlkilajbabzbmbpratnq.supabase.co'; // Project URL
-var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRsa2lsYWpiYWJ6Ym1icHJhdG5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5ODIxOTksImV4cCI6MjA5NjU1ODE5OX0.zUqBH_5Boh1_NL98HinpQ8lGIK9GAujvra-FdXRdzO4'; 
+var SB_KEY = '';  // anon public key（eyJ... または sb_publishable_...）
 
 /* ======== グローバル変数 ======== */
 var _url = '', _key = '', isReady = false;
@@ -871,11 +871,16 @@ function aProducts(){
   var active=PRODUCTS.filter(function(p){return p.is_active!==false;});
   var inactive=PRODUCTS.filter(function(p){return p.is_active===false;});
   return'<div style="padding:12px">'+
-  '<button class="btn bg" onclick="openProd(0)" style="font-size:16px;padding:16px;margin-bottom:12px">'+
-  '<i class="ti ti-plus"></i>＋ 商品を追加する</button>'+
+  '<button class="btn bg" onclick="openProd(0)" style="font-size:16px;padding:16px;margin-bottom:10px">'+
+  '<i class="ti ti-plus"></i>＋ 発注項目を追加する</button>'+
+  (isReady?
+    '<button onclick="reloadProds()" style="width:100%;padding:10px;background:var(--sf);border:1px solid var(--br);border-radius:var(--r8);font-size:13px;color:var(--m);cursor:pointer;margin-bottom:4px">'+
+    '<i class="ti ti-refresh" style="font-size:14px"></i> 最新データを再読み込み</button>':
+    '<div style="background:var(--ol);border:1px solid #FAC775;border-radius:var(--r8);padding:10px 12px;font-size:12px;color:var(--od);margin-bottom:6px">'+
+    '⚠️ デモモード：Supabase未接続のため保存はアプリ内のみです。接続すると全端末で共有されます。</div>')+
   '</div>'+
   '<div style="padding:0 12px 4px;display:flex;align-items:center;gap:8px">'+
-  '<div style="flex:1;font-size:14px;color:var(--m)">登録商品 '+active.length+'件（非表示 '+inactive.length+'件）</div>'+
+  '<div style="flex:1;font-size:14px;color:var(--m)">登録済み発注項目 '+active.length+'件（非表示 '+inactive.length+'件）</div>'+
   '</div>'+
   '<div class="card" style="margin-top:4px">'+
   (active.length?active.map(function(p){
@@ -884,21 +889,30 @@ function aProducts(){
     return'<div class="pi">'+
     '<div style="flex:1;min-width:0">'+
     '<div class="pn">'+(p.is_frequent?'⭐ ':'')+esc(p.name)+'</div>'+
-    '<div class="pu">'+esc(cat?cat.name:(p.category_name||'カテゴリー未設定'))+' / '+esc(p.unit)+
+    '<div class="pu">'+
+    (cat?esc(cat.name):(p.category_name?esc(p.category_name):'カテゴリーなし'))+' / '+esc(p.unit)+
     (vis.length?' ｜ '+vis.length+'店舗に表示':' ｜ 全店舗に表示')+'</div>'+
     (p.memo?'<div style="font-size:11px;color:var(--h);margin-top:2px">📝 '+esc(p.memo)+'</div>':'')+
     '</div>'+
     '<div style="display:flex;gap:6px;flex-shrink:0">'+
-    '<button class="btn bo bsm" onclick="openProd('+p.id+')"><i class="ti ti-edit" style="font-size:13px"></i></button>'+
-    '<button class="btn bgy bsm" onclick="tglActive('+p.id+',false)"><i class="ti ti-eye-off" style="font-size:13px"></i></button>'+
+    '<button class="btn bo bsm" onclick="openProd('+p.id+')" title="編集"><i class="ti ti-edit" style="font-size:13px"></i></button>'+
+    '<button class="btn bgy bsm" onclick="tglActive('+p.id+',false)" title="非表示"><i class="ti ti-eye-off" style="font-size:13px"></i></button>'+
     '</div></div>';
-  }).join(''):'<div class="emp">商品がありません。上の「＋ 商品を追加する」ボタンから追加してください。</div>')+
+  }).join('')+'<div style="padding:8px 16px;font-size:12px;color:var(--h);border-top:1px solid var(--br)">'+
+  '鉛筆アイコン：編集　👁‍🗨アイコン：非表示にする</div>':
+  '<div class="emp">発注項目がありません。<br>上の「＋ 発注項目を追加する」から登録してください。</div>')+
   '</div>'+
-  (inactive.length?'<div class="sl2" style="color:var(--gr)">非表示の商品（'+inactive.length+'件）</div>'+
+  (inactive.length?'<div class="sl2" style="color:var(--gr);margin-top:8px">非表示の発注項目（'+inactive.length+'件）</div>'+
   '<div class="card" style="margin-top:0">'+inactive.map(function(p){
     return'<div class="pi"><div style="flex:1;min-width:0"><div class="pn" style="color:var(--h)">'+esc(p.name)+'</div><div class="pu">'+esc(p.unit)+'</div></div>'+
     '<button class="btn bo bsm" onclick="tglActive('+p.id+',true)"><i class="ti ti-eye" style="font-size:13px"></i>表示に戻す</button></div>';
   }).join('')+'</div>':'');
+}
+async function reloadProds(){
+  if(!isReady)return;
+  showL('最新データを取得中…');
+  await loadMaster();
+  hideL();S.adminTab=1;render();toast('最新データを読み込みました');
 }
 function aCats(){
   return'<div style="padding:12px 12px 4px;display:flex;align-items:center;gap:8px">'+
@@ -934,17 +948,24 @@ function renderModalHtml(){
   return'';
 }
 function openProd(pid){
-  // pid=0が新規、それ以外は編集
   pid=Number(pid)||0;
+  // STORESが空ならデフォルト6店舗を使う
+  var stores=STORES.length?STORES:[
+    {id:1,name:'うどん屋たくあん',short_name:'うどん屋'},{id:2,name:'お弁当たくあん',short_name:'お弁当'},
+    {id:3,name:'幸せや坂戸店',short_name:'幸せや坂戸'},{id:4,name:'幸せや今渡店',short_name:'幸せや今渡'},
+    {id:5,name:'幸せや則武店',short_name:'幸せや則武'},{id:6,name:'アーラ店',short_name:'アーラ'}
+  ];
+  if(!STORES.length)STORES=stores;
+
   var p=pid?PRODUCTS.find(function(x){return Number(x.id)===pid;}):null;
   var psvEntry=pid?PSV[pid]:null;
   var visStores=(!pid||!psvEntry||!psvEntry.length)?STORES.map(function(s){return Number(s.id);}):psvEntry.slice();
   S.modal={type:'product',data:{p:p,visStores:visStores}};
-  // CATSまたはSTORESが空なら再取得してからモーダルを開く
-  if(isReady&&(!CATS.length||!STORES.length)){
-    showL('カテゴリー・店舗情報を取得中…');
+
+  // 接続済みでCATSが空なら再取得してからモーダルを開く
+  if(isReady&&!CATS.length){
+    showL('カテゴリー情報を取得中…');
     loadMaster().then(function(){
-      // 再取得後にvisStoresを更新
       var pE=pid?PSV[pid]:null;
       S.modal.data.visStores=(!pid||!pE||!pE.length)?STORES.map(function(s){return Number(s.id);}):pE.slice();
       hideL();render();
