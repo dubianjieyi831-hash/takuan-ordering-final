@@ -135,7 +135,8 @@ textarea.fi{resize:none;font-family:inherit;min-height:72px}
    Supabase → Settings → API から取得
 ======================================================== */
 var SB_URL = 'https://dlkilajbabzbmbpratnq.supabase.co'; // Project URL
-var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRsa2lsYWpiYWJ6Ym1icHJhdG5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5ODIxOTksImV4cCI6MjA5NjU1ODE5OX0.zUqBH_5Boh1_NL98HinpQ8lGIK9GAujvra-FdXRdzO4'; 
+var SB_KEY = '';  // anon public key（eyJ... または sb_publishable_...）
+
 /* ======== グローバル変数 ======== */
 var _url = '', _key = '', isReady = false;
 var STORES = [], CATS = [], PRODUCTS = [], PSV = {}; // PSV: {product_id(num): [store_id(num),...]}
@@ -460,7 +461,7 @@ async function doLogin(){
   if(S.view==='admin'){
     var t=jst.iso,mo=new Date();mo.setDate(mo.getDate()-30);
     S.af={from:mo.toISOString().slice(0,10),to:t,sid:'',status:'',kw:''};
-    S.adminTab=1; // 商品管理タブをデフォルトに
+    S.adminTab=0; // 商品管理タブ（先頭）
     showL('データ読み込み中…');await fetchAdmin();hideL();
   }
   if(S.view==='ck')startAR();
@@ -816,6 +817,8 @@ function ckHV(){
 
 /* ======== ADMIN画面 ======== */
 function vAdmin(){
+  // 管理者画面は商品管理タブをデフォルトにする
+  if(S.adminTab===undefined)S.adminTab=0;
   return'<div class="app">'+
   '<div class="bar"><i class="ti ti-settings" style="font-size:22px;color:var(--o)"></i>'+
   '<div class="bar-t" style="flex:1">管理者</div>'+
@@ -823,8 +826,11 @@ function vAdmin(){
   lbtn()+'</div>'+
   '<div class="con">'+
   '<div class="tabs">'+
-  ['発注履歴','商品管理','カテゴリー','店舗設定'].map(function(t,i){return'<div class="tab'+(S.adminTab===i?' on':'')+'" onclick="S.adminTab='+i+';render()">'+t+'</div>';}).join('')+'</div>'+
-  (S.adminTab===0?aHistory():S.adminTab===1?aProducts():S.adminTab===2?aCats():aStores())+
+  ['商品管理','発注履歴','カテゴリー','店舗設定'].map(function(t,i){
+    // タブ順を変更：0=商品管理、1=発注履歴、2=カテゴリー、3=店舗設定
+    return'<div class="tab'+(S.adminTab===i?' on':'')+'" onclick="S.adminTab='+i+';render()">'+t+'</div>';
+  }).join('')+'</div>'+
+  (S.adminTab===0?aProducts():S.adminTab===1?aHistory():S.adminTab===2?aCats():aStores())+
   '</div><nav class="nav"><button class="nb on"><i class="ti ti-settings"></i>管理</button></nav></div>';
 }
 function aHistory(){
@@ -911,7 +917,7 @@ async function reloadProds(){
   if(!isReady)return;
   showL('最新データを取得中…');
   await loadMaster();
-  hideL();S.adminTab=1;render();toast('最新データを読み込みました');
+  hideL();S.adminTab=0;render();toast('最新データを読み込みました');
 }
 function aCats(){
   return'<div style="padding:12px 12px 4px;display:flex;align-items:center;gap:8px">'+
@@ -1085,7 +1091,7 @@ async function saveProd(pid){
       }
       await loadMaster();
     }
-    S.modal=null;S.adminTab=1;
+    S.modal=null;S.adminTab=0;
     toast(pid?'商品を更新しました':'商品を追加しました');render();
   }catch(err){
     if(btn)btn.disabled=false;
@@ -1102,7 +1108,7 @@ async function tglActive(pid,active){
     if(r.error){toast('更新失敗: '+safeMsg(r.error),true);return;}
     await loadMaster();
   }
-  S.adminTab=1;toast(active?'表示に戻しました':'非表示にしました');render();
+  S.adminTab=0;toast(active?'表示に戻しました':'非表示にしました');render();
 }
 async function delProd(pid){
   pid=Number(pid);
@@ -1114,7 +1120,7 @@ async function delProd(pid){
     var r=await DB.from('products').delete().eq('id',pid);
     if(r.error){toast('削除失敗: '+safeMsg(r.error),true);return;}
   }
-  S.modal=null;S.adminTab=1;toast('商品を削除しました');render();
+  S.modal=null;S.adminTab=0;toast('商品を削除しました');render();
 }
 function mCat(d){
   var c=d.c,isNew=!c;
