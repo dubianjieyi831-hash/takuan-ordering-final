@@ -480,7 +480,7 @@ let isReady = false;
 
 async function initSB(url, key) {
   var u = cleanUrl(url);
-  var k = (key || '').trim().replace(/\s/g, '');
+  var k = (key || '').replace(/[\s\r\n]/g, '');
   if (!u || !k) return { ok: false, errorMsg: 'URLとAnon Keyを入力してください' };
 
   // ── 接続テスト：safeFetchでstoresを1件取得 ──
@@ -763,21 +763,21 @@ async function doTest(){
   try{rawK=($('sb-key').value||'').trim();}catch(_){rawK='';}
   if(!rawU||!rawK){box.innerHTML=cBox('e','URLとAnon Keyの両方を入力してください');return;}
   var u=cleanUrl(rawU);
-  var k=rawK.replace(/\s/g,'');
+  // 全ての空白・改行を除去
+  var k=rawK.replace(/[\s\r\n]/g,'');
   if(!u.match(/^https:\/\/[a-z0-9-]+\.supabase\.co$/i)){
     box.innerHTML=cBox('e','URLの形式が正しくありません\n正しい形式: https://xxxxx.supabase.co');return;
   }
-  if(!k.startsWith('eyJ')){
-    box.innerHTML=cBox('e','Anon Keyは「eyJ」で始まる文字列を入力してください');return;
+  // eyJ...（JWT形式）またはsb_publishable_...（新形式）の両方を許可
+  if(!k.startsWith('eyJ')&&!k.startsWith('sb_publishable_')&&!k.startsWith('sb_')){
+    box.innerHTML=cBox('e','Anon Keyの形式が正しくありません\n・旧形式: eyJhbGci... で始まるJWT\n・新形式: sb_publishable_xxxx で始まる文字列\nSupabase → Settings → API → anon public をコピーしてください');return;
   }
   try{$('sb-url').value=u;}catch(_){}
-  box.innerHTML='<div class="cbox cif"><div class="sp spsm"></div><span>接続テスト中…（Vercel公開URLのみ対応）</span></div>';
+  box.innerHTML='<div class="cbox cif"><div class="sp spsm"></div><span>接続テスト中…</span></div>';
 
-  // initSBは必ず {ok, errorMsg or storeNames} を返す（例外を投げない）
   var r;
   try{r=await initSB(u,k);}
   catch(unexpected){
-    // initSBが万が一throwした場合も安全に処理
     var unexpectedMsg='接続処理中にエラーが発生しました';
     try{if(unexpected instanceof Error)unexpectedMsg=unexpected.message;}catch(_){}
     box.innerHTML=cBox('e',unexpectedMsg);
@@ -785,7 +785,6 @@ async function doTest(){
   }
 
   if(r&&r.ok){
-    // 成功時はlocalStorageに保存
     try{localStorage.setItem('supabase_url',u);}catch(_){}
     try{localStorage.setItem('supabase_anon_key',k);}catch(_){}
     try{localStorage.setItem('supabase_connected','true');}catch(_){}
@@ -796,7 +795,12 @@ async function doTest(){
     box.innerHTML=cBox('ok','Supabase接続に成功しました ✓\n接続先: '+u+'\nstores: '+names);
   }else{
     var errMsg=(r&&r.errorMsg)||'不明なエラー';
-    box.innerHTML=cBox('e',jp(errMsg));
+    // 401の場合は保存済みキーを削除するボタンも表示
+    var extra='';
+    if(errMsg.includes('401')){
+      extra='<button onclick="clearSavedKey()" style="margin-top:8px;background:none;border:1px solid #791F1F;border-radius:6px;padding:6px 12px;font-size:12px;color:#791F1F;cursor:pointer">保存済み接続情報を削除して再入力</button>';
+    }
+    box.innerHTML=cBox('e',jp(errMsg))+(extra?'<div style="padding:0 14px 10px">'+extra+'</div>':'');
   }
 }
 
@@ -826,6 +830,18 @@ async function doStart(){
 }
 
 function doDemo(){isReady=false;_sbUrl='';_sbKey='';S.view='login';render();}
+
+/* 保存済み接続情報を削除して再入力できるようにする */
+function clearSavedKey(){
+  ['supabase_url','supabase_anon_key','supabase_connected','tk_cfg2'].forEach(function(k){
+    try{localStorage.removeItem(k);}catch(_){}
+  });
+  isReady=false;_sbUrl='';_sbKey='';
+  try{var el=$('sb-url');if(el)el.value='';}catch(_){}
+  try{var el=$('sb-key');if(el)el.value='';}catch(_){}
+  var box=$('cst');
+  if(box)box.innerHTML=cBox('w','保存済み接続情報を削除しました。\nURLとAnon Keyを再入力して接続テストしてください。');
+}
 
 /* ══════════════════════════════════════════
    LOGIN
@@ -2174,20 +2190,29 @@ function doCSV(){
 (async function boot(){
   const saved=lCfg();
   const codeUrl=cleanUrl(SUPABASE_URL||'');
-  const codeKey=((SUPABASE_ANON_KEY||'').trim().replace(/\s/g,''));
+  // 全空白・改行を除去
+  const codeKey=((SUPABASE_ANON_KEY||'').replace(/[\s\r\n]/g,''));
   const url=codeUrl||cleanUrl(saved.url||'');
-  const key=codeKey||(saved.anonKey||'').trim();
+  const key=codeKey||((saved.anonKey||'').replace(/[\s\r\n]/g,''));
   if(url&&key){
     showL('Supabaseに自動接続中…');
     const r=await initSB(url,key);
     hideL();
     if(r.ok){
       sCfg(url,key);
-      // 接続成功 → storesを確実に取得してからログイン画面へ
       await ensureStores();
       S.view='login';
     }else{
-      S.view='setup';S.bootError=jp(r.errorMsg||'不明なエラー');
+      // 401の場合は古い保存キーを削除（間違ったキーで自動接続ループを防ぐ）
+      if((r.errorMsg||'').includes('401')){
+        ['supabase_url','supabase_anon_key','supabase_connected','tk_cfg2'].forEach(function(k){
+          try{localStorage.removeItem(k);}catch(_){}
+        });
+        S.bootError='保存済みのAnon Keyが無効です（401）。\n正しいAnon Keyを再入力してください。\n\nSupabase → Settings → API → anon public をコピーしてください。';
+      }else{
+        S.bootError=jp(r.errorMsg||'不明なエラー');
+      }
+      S.view='setup';
     }
   }else{
     S.view='setup';
