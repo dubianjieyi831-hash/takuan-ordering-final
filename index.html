@@ -135,7 +135,8 @@ textarea.fi{resize:none;font-family:inherit;min-height:72px}
    Supabase → Settings → API から取得
 ======================================================== */
 var SB_URL = 'https://dlkilajbabzbmbpratnq.supabase.co'; // Project URL
-var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRsa2lsYWpiYWJ6Ym1icHJhdG5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5ODIxOTksImV4cCI6MjA5NjU1ODE5OX0.zUqBH_5Boh1_NL98HinpQ8lGIK9GAujvra-FdXRdzO4';
+var SB_KEY = '';  // anon public key（eyJ... または sb_publishable_...）
+
 /* ======== グローバル変数 ======== */
 var _url = '', _key = '', isReady = false;
 var STORES = [], CATS = [], PRODUCTS = [], PSV = {}; // PSV: {product_id(num): [store_id(num),...]}
@@ -933,7 +934,19 @@ function openProd(pid){
   var p=pid?PRODUCTS.find(function(x){return Number(x.id)===pid;}):null;
   var psvEntry=pid?PSV[pid]:null;
   var visStores=(!pid||!psvEntry||!psvEntry.length)?STORES.map(function(s){return Number(s.id);}):psvEntry.slice();
-  S.modal={type:'product',data:{p:p,visStores:visStores}};render();
+  S.modal={type:'product',data:{p:p,visStores:visStores}};
+  // CATSまたはSTORESが空なら再取得してからモーダルを開く
+  if(isReady&&(!CATS.length||!STORES.length)){
+    showL('カテゴリー・店舗情報を取得中…');
+    loadMaster().then(function(){
+      // 再取得後にvisStoresを更新
+      var pE=pid?PSV[pid]:null;
+      S.modal.data.visStores=(!pid||!pE||!pE.length)?STORES.map(function(s){return Number(s.id);}):pE.slice();
+      hideL();render();
+    });
+  }else{
+    render();
+  }
 }
 function openCat(cid){
   cid=Number(cid)||0;
@@ -954,10 +967,11 @@ function mProd(d){
   '<div style="padding:16px;display:flex;flex-direction:column;gap:12px">'+
   '<div><label class="fl">商品名 <span style="color:var(--rd)">*</span></label>'+
   '<input type="text" class="fi" id="pm-name" value="'+esc(p?p.name:'')+'" placeholder="例：ヒレカツ肉" autocomplete="off"></div>'+
-  '<div><label class="fl">カテゴリー <span style="color:var(--rd)">*</span></label>'+
+  '<div><label class="fl">カテゴリー（任意）</label>'+
   '<select class="fsel" id="pm-cat" style="margin-bottom:0">'+
-  '<option value="">カテゴリーを選択してください</option>'+
-  CATS.map(function(c){return'<option value="'+c.id+'"'+(p&&Number(p.category_id)===Number(c.id)?' selected':'')+'>'+esc(c.name)+'</option>';}).join('')+'</select></div>'+
+  '<option value="">カテゴリーなし</option>'+
+  CATS.map(function(c){return'<option value="'+c.id+'"'+(p&&Number(p.category_id)===Number(c.id)?' selected':'')+'>'+esc(c.name)+'</option>';}).join('')+'</select>'+
+  (CATS.length===0?'<div style="font-size:12px;color:var(--h);margin-top:4px">カテゴリーが読み込まれていません。管理者 → カテゴリータブで追加してください。</div>':'')+'</div>'+
   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
   '<div><label class="fl">単位 <span style="color:var(--rd)">*</span></label>'+
   '<input type="text" class="fi" id="pm-unit" value="'+esc(p?p.unit:'')+'" placeholder="例：kg、個、袋" autocomplete="off"></div>'+
@@ -1008,12 +1022,12 @@ async function saveProd(pid){
   var memo=(($('pm-memo')?$('pm-memo').value:'')||'').trim();
   var freq=$('pm-freq')?$('pm-freq').checked:false;
   if(!name){errEl.innerHTML='<div class="al ae"><i class="ti ti-alert-circle"></i><span>商品名を入力してください</span></div>';return;}
-  if(!catRaw){errEl.innerHTML='<div class="al ae"><i class="ti ti-alert-circle"></i><span>カテゴリーを選択してください</span></div>';return;}
+  // カテゴリーは任意（空でも保存可能）
   if(!unit){errEl.innerHTML='<div class="al ae"><i class="ti ti-alert-circle"></i><span>単位を入力してください</span></div>';return;}
-  // String比較でカテゴリーを検索（型不一致を防ぐ）
-  var cat=CATS.find(function(c){return String(c.id)===String(catRaw);});
-  var catId=cat?Number(cat.id):Number(catRaw);
-  var catName=cat?cat.name:catRaw;
+  // String比較でカテゴリーを検索（型不一致を防ぐ）。catRawが空の場合はカテゴリーなしで保存
+  var cat=catRaw?CATS.find(function(c){return String(c.id)===String(catRaw);}):null;
+  var catId=cat?Number(cat.id):(catRaw?Number(catRaw)||null:null);
+  var catName=cat?cat.name:(catRaw||'');
   // 表示店舗（数値IDで保持）
   var visStores=[];
   document.querySelectorAll('[id^="pm-vis-"]').forEach(function(cb){if(cb.checked)visStores.push(Number(cb.dataset.sid||cb.id.replace('pm-vis-','')));});
