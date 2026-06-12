@@ -135,7 +135,7 @@ textarea.fi{resize:none;font-family:inherit;min-height:72px}
    Supabase → Settings → API から取得
 ======================================================== */
 var SB_URL = 'https://dlkilajbabzbmbpratnq.supabase.co'; // Project URL
-var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRsa2lsYWpiYWJ6Ym1icHJhdG5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5ODIxOTksImV4cCI6MjA5NjU1ODE5OX0.zUqBH_5Boh1_NL98HinpQ8lGIK9GAujvra-FdXRdzO4'; 
+var SB_KEY = '';  // anon public key（eyJ... または sb_publishable_...）
 
 /* ======== グローバル変数 ======== */
 var _url = '', _key = '', isReady = false;
@@ -461,6 +461,7 @@ async function doLogin(){
   if(S.view==='admin'){
     var t=jst.iso,mo=new Date();mo.setDate(mo.getDate()-30);
     S.af={from:mo.toISOString().slice(0,10),to:t,sid:'',status:'',kw:''};
+    S.adminTab=1; // 商品管理タブをデフォルトに
     showL('データ読み込み中…');await fetchAdmin();hideL();
   }
   if(S.view==='ck')startAR();
@@ -869,9 +870,13 @@ function aHistory(){
 function aProducts(){
   var active=PRODUCTS.filter(function(p){return p.is_active!==false;});
   var inactive=PRODUCTS.filter(function(p){return p.is_active===false;});
-  return'<div style="padding:12px 12px 4px;display:flex;align-items:center;gap:8px">'+
+  return'<div style="padding:12px">'+
+  '<button class="btn bg" onclick="openProd(0)" style="font-size:16px;padding:16px;margin-bottom:12px">'+
+  '<i class="ti ti-plus"></i>＋ 商品を追加する</button>'+
+  '</div>'+
+  '<div style="padding:0 12px 4px;display:flex;align-items:center;gap:8px">'+
   '<div style="flex:1;font-size:14px;color:var(--m)">登録商品 '+active.length+'件（非表示 '+inactive.length+'件）</div>'+
-  '<button class="btn bg bsm" onclick="openProd(0)"><i class="ti ti-plus"></i>商品追加</button></div>'+
+  '</div>'+
   '<div class="card" style="margin-top:4px">'+
   (active.length?active.map(function(p){
     var cat=CATS.find(function(c){return Number(c.id)===Number(p.category_id);});
@@ -887,7 +892,7 @@ function aProducts(){
     '<button class="btn bo bsm" onclick="openProd('+p.id+')"><i class="ti ti-edit" style="font-size:13px"></i></button>'+
     '<button class="btn bgy bsm" onclick="tglActive('+p.id+',false)"><i class="ti ti-eye-off" style="font-size:13px"></i></button>'+
     '</div></div>';
-  }).join(''):'<div class="emp">商品がありません<br><button class="btn bg bsm" style="margin-top:12px" onclick="openProd(0)"><i class="ti ti-plus"></i>商品を追加する</button></div>')+
+  }).join(''):'<div class="emp">商品がありません。上の「＋ 商品を追加する」ボタンから追加してください。</div>')+
   '</div>'+
   (inactive.length?'<div class="sl2" style="color:var(--gr)">非表示の商品（'+inactive.length+'件）</div>'+
   '<div class="card" style="margin-top:0">'+inactive.map(function(p){
