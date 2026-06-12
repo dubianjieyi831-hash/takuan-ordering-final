@@ -290,9 +290,9 @@ async function initSB(url,key){
 
 /* ======== 状態 ======== */
 var S={
-  view:'login',   // login|manager|ck|admin|setup
+  view:'login',
   role:null,storeId:null,storeErr:'',
-  connErr:'',     // Supabase接続エラーメッセージ
+  connErr:'',
   phase:'home',   // home|order|confirm|success|noorder_confirm|noorder_done|history
   qty:{},memo:'',catOpen:{},
   ckTab:0,detail:null,ckChecked:{},showHist:false,histOrders:[],
@@ -339,7 +339,7 @@ function bdg(st){var m=sMeta(st);return'<span class="bdg '+m.b+'">'+m.l+'</span>
 /* ======== レンダリング ======== */
 function render(){
   try{
-    var html=S.view==='setup'?vSetup():S.view==='login'?vLogin():S.view==='manager'?vManager():S.view==='ck'?vCK():vAdmin();
+    var html=S.view==='login'?vLogin():S.view==='manager'?vManager():S.view==='ck'?vCK():vAdmin();
     $('root').innerHTML=html;
     var mw=$('modal-wrap');if(mw)mw.innerHTML=S.modal?renderModalHtml():'';
   }catch(err){
@@ -348,77 +348,12 @@ function render(){
   }
 }
 
-/* ======== SETUP画面（接続情報を再設定したい場合） ======== */
-function vSetup(){
-  return'<div class="setup">'+
-  '<div style="text-align:center;margin-bottom:20px">'+
-  '<div style="width:72px;height:72px;background:var(--o);border-radius:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px"><i class="ti ti-database" style="font-size:40px;color:#fff"></i></div>'+
-  '<div style="font-size:20px;font-weight:600;margin-bottom:4px">Supabase 接続設定</div></div>'+
-  (S.setupErr?'<div class="cbox cer" style="max-width:420px;width:100%;margin-bottom:12px;white-space:pre-wrap"><i class="ti ti-alert-circle"></i><span>'+esc(S.setupErr)+'</span></div>':'')+
-  '<div class="scard">'+
-  '<div style="font-size:13px;color:var(--m);margin-bottom:14px;line-height:1.7">Supabase → <strong>Settings → API</strong> から<br><strong>Project URL</strong> と <strong>anon public</strong> を貼り付けてください。</div>'+
-  '<label class="fl">SUPABASE URL</label>'+
-  '<textarea id="sb-url" class="stx" rows="2" placeholder="https://xxxxx.supabase.co" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">'+esc(_url||SB_URL||'')+'</textarea>'+
-  '<label class="fl">ANON KEY</label>'+
-  '<textarea id="sb-key" class="stx" rows="3" placeholder="eyJhbGci... または sb_publishable_..." autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">'+esc(_key||SB_KEY||'')+'</textarea>'+
-  '<div id="cst" style="min-height:4px"></div>'+
-  '<button class="btn bo" onclick="doTest()" style="margin-bottom:10px"><i class="ti ti-plug"></i>接続テスト</button>'+
-  '<button class="btn bg" onclick="doConnect()"><i class="ti ti-login"></i>接続してログインへ</button>'+
-  '</div></div>';
-}
-function cBox(t,msg){
-  var m={ok:{c:'cok',i:'ti-circle-check'},w:{c:'cwn',i:'ti-clock'},e:{c:'cer',i:'ti-alert-circle'}}[t]||{c:'cer',i:'ti-alert-circle'};
-  return'<div class="cbox '+m.c+'"><i class="ti '+m.i+'"></i><span style="white-space:pre-wrap">'+esc(String(msg||''))+'</span></div>';
-}
-async function doTest(){
-  var box=$('cst');if(!box)return;
-  var u=($('sb-url')?($('sb-url').value||''):'').trim();
-  var k=($('sb-key')?($('sb-key').value||''):'').replace(/[\s\r\n]/g,'');
-  if(!u||!k){box.innerHTML=cBox('e','URLとキーを入力してください');return;}
-  box.innerHTML='<div class="cbox cif"><div class="sp spsm"></div><span>接続テスト中…</span></div>';
-  var r=await initSB(u,k);
-  if(r.ok){box.innerHTML=cBox('ok','接続成功 ✓ stores: '+STORES.map(function(s){return s.name;}).join('、'));}
-  else{box.innerHTML=cBox('e',r.msg||'接続失敗');}
-}
-async function doConnect(){
-  var u=($('sb-url')?($('sb-url').value||''):'').trim();
-  var k=($('sb-key')?($('sb-key').value||''):'').replace(/[\s\r\n]/g,'');
-  if(!u||!k){toast('URLとキーを入力してください',true);return;}
-  showL('接続中…');
-  var r=await initSB(u,k);
-  hideL();
-  if(!r.ok){toast((r.msg||'接続失敗').split('\n')[0],true);return;}
-  S.setupErr='';S.view='login';render();
-}
-
 /* ======== LOGIN ======== */
 function vLogin(){
-  // 接続エラーがある場合：キー入力フォームを表示
-  if(S.connErr||!isReady){
-    return'<div class="lp">'+
-    '<div style="width:80px;height:80px;background:var(--o);border-radius:22px;display:flex;align-items:center;justify-content:center;margin-bottom:20px"><i class="ti ti-database" style="font-size:44px;color:#fff"></i></div>'+
-    '<div style="font-size:20px;font-weight:600;margin-bottom:4px;text-align:center">Supabase接続設定</div>'+
-    '<div style="font-size:13px;color:var(--m);margin-bottom:20px;text-align:center">CK発注システム - たくあんグループ</div>'+
-    '<div style="max-width:380px;width:100%">'+
-    (S.connErr?'<div class="cbox cer" style="margin-bottom:12px;white-space:pre-wrap"><i class="ti ti-alert-circle"></i><span>'+esc(S.connErr)+'</span></div>':'')+
-    '<div style="background:#FFF8E1;border:1px solid #FFD54F;border-radius:var(--r8);padding:10px 14px;font-size:12px;color:#5D4037;margin-bottom:14px;line-height:1.7">'+
-    '<strong>接続方法</strong><br>'+
-    'Supabase → Settings → API から<br>'+
-    '① Project URL<br>② anon public key<br>をコピーして貼り付けてください。</div>'+
-    '<div class="lcard">'+
-    '<label class="fl">SUPABASE PROJECT URL</label>'+
-    '<input type="url" id="conn-url" class="fi" style="margin-bottom:12px;font-size:13px;font-family:monospace" value="'+esc((SB_URL||'').replace(/[\s\r\n]/g,''))+'" placeholder="https://xxxxx.supabase.co" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">'+
-    '<label class="fl">ANON PUBLIC KEY</label>'+
-    '<textarea id="conn-key" class="fi" rows="4" style="margin-bottom:12px;font-size:12px;font-family:monospace;min-height:88px" placeholder="eyJhbGci... または sb_publishable_..." autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">'+esc((SB_KEY||'').replace(/[\s\r\n]/g,''))+'</textarea>'+
-    '<div id="conn-err" style="min-height:4px;margin-bottom:8px"></div>'+
-    '<button class="btn bg" onclick="doConnect()"><i class="ti ti-plug"></i>接続してログイン画面へ</button>'+
-    '</div></div></div>';
-  }
-
-  // 接続済み：通常のログイン画面
   var st=STORES.filter(function(s){return s.is_active!==false;});
+  var connOk=isReady;
   var sel='';
-  if(S.role==='mgr'){
+  if(S.role==='mgr'&&connOk){
     if(!st.length){
       sel='<div class="al ae" style="margin:0 0 12px"><i class="ti ti-alert-circle"></i><span>店舗が登録されていません</span></div>'+
           '<button class="btn bgy bsm" onclick="reloadStores()" style="margin-bottom:14px"><i class="ti ti-refresh"></i>再読み込み</button>';
@@ -430,33 +365,25 @@ function vLogin(){
     }
   }
   return'<div class="lp">'+
-  '<div style="width:80px;height:80px;background:var(--g);border-radius:22px;display:flex;align-items:center;justify-content:center;margin-bottom:20px"><i class="ti ti-truck-delivery" style="font-size:44px;color:#fff"></i></div>'+
+  '<div style="width:80px;height:80px;background:'+(connOk?'var(--g)':'var(--o)')+';border-radius:22px;display:flex;align-items:center;justify-content:center;margin-bottom:20px">'+
+  '<i class="ti '+(connOk?'ti-truck-delivery':'ti-database')+'" style="font-size:44px;color:#fff"></i></div>'+
   '<div style="font-size:22px;font-weight:600;margin-bottom:4px;text-align:center">CK発注システム</div>'+
   '<div style="font-size:14px;color:var(--m);margin-bottom:20px;text-align:center">たくあんグループ 6店舗</div>'+
-  '<div style="display:flex;align-items:center;gap:6px;background:var(--gl);border:1px solid var(--gm);border-radius:var(--r8);padding:8px 14px;margin-bottom:16px;max-width:380px;width:100%;font-size:13px;color:var(--gd)">'+
-  '<span class="rdot"></span>Supabase接続済み</div>'+
+  (connOk?
+    '<div style="display:flex;align-items:center;gap:6px;background:var(--gl);border:1px solid var(--gm);border-radius:var(--r8);padding:8px 14px;margin-bottom:16px;max-width:380px;width:100%;font-size:13px;color:var(--gd)">'+
+    '<span class="rdot"></span>Supabase接続済み</div>':
+    '<div style="background:var(--rl);border:1px solid #F7C1C1;border-radius:var(--r8);padding:12px 14px;margin-bottom:16px;max-width:380px;width:100%">'+
+    '<div style="font-size:14px;font-weight:600;color:#791F1F;margin-bottom:6px"><i class="ti ti-alert-circle"></i> Supabase未接続</div>'+
+    '<div style="font-size:13px;color:#791F1F;line-height:1.7;margin-bottom:10px;white-space:pre-wrap">'+esc(S.connErr||'SB_KEYが設定されていません')+'</div>'+
+    '<div style="font-size:12px;color:#791F1F;background:rgba(255,255,255,.6);border-radius:6px;padding:8px 10px;font-family:monospace;line-height:1.8">'+
+    '【対処方法】<br>index.htmlの以下の行を編集してください：<br>var SB_KEY = \'★ここにanon public keyを貼る★\';</div></div>')+
   '<div class="lcard">'+
   '<div style="font-size:12px;font-weight:600;color:var(--m);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">役割を選択</div>'+
   rBtn('mgr','ti-building-store','#E1F5EE','var(--g)','店長','発注・履歴確認')+
   rBtn('ck','ti-package','#E6F1FB','var(--b)','CK担当','発注確認・出荷管理')+
   rBtn('adm','ti-settings','#FAEEDA','var(--o)','管理者','商品管理・履歴・設定')+
   (S.role==='mgr'?'<div style="margin-top:14px"><div style="font-size:12px;font-weight:600;color:var(--m);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">店舗を選択 <span style="color:var(--rd)">*</span></div>'+sel+'</div>':'')+
-  '<button class="btn bg" id="login-btn" onclick="doLogin()"><i class="ti ti-login"></i>ログイン</button></div></div>';
-}
-async function doConnect(){
-  var urlEl=$('conn-url'),keyEl=$('conn-key'),errEl=$('conn-err');
-  var u=(urlEl?urlEl.value:'').trim().replace(/[\s\r\n]/g,'');
-  var k=(keyEl?keyEl.value:'').replace(/[\s\r\n]/g,'');
-  if(!u||!k){if(errEl)errEl.innerHTML='<div class="al ae" style="margin:0"><i class="ti ti-alert-circle"></i><span>URLとAnon Keyを入力してください</span></div>';return;}
-  var btn=document.querySelector('[onclick="doConnect()"]');if(btn)btn.disabled=true;
-  if(errEl)errEl.innerHTML='<div class="cbox cif"><div class="sp spsm"></div><span>接続テスト中…</span></div>';
-  var r=await initSB(u,k);
-  if(r.ok){
-    S.connErr='';S.view='login';render();
-  }else{
-    if(btn)btn.disabled=false;
-    if(errEl)errEl.innerHTML='<div class="al ae" style="margin:0"><i class="ti ti-alert-circle"></i><span style="white-space:pre-wrap">'+esc(r.msg||'接続失敗')+'</span></div>';
-  }
+  '<button class="btn bg" id="login-btn" onclick="doLogin()" '+(connOk?'':'disabled')+'><i class="ti ti-login"></i>ログイン</button></div></div>';
 }
 function rBtn(r,ic,bg,cl,name,desc){
   return'<button class="rbtn'+(S.role===r?' sel':'')+'" onclick="S.role=\''+r+'\';S.storeId=null;S.storeErr=\'\';render()">'+
@@ -1329,7 +1256,7 @@ function doCSV(){
 
 /* ======== 起動処理 ======== */
 (async function boot(){
-  // localStorageは使わない。SB_URLとSB_KEYのみ使用
+  // localStorageは使わない。SB_URLとSB_KEYのみ使用。
   var u=(SB_URL||'').replace(/[\s\r\n]/g,'');
   var k=(SB_KEY||'').replace(/[\s\r\n]/g,'');
   startDW();
@@ -1337,12 +1264,11 @@ function doCSV(){
     showL('接続中…');
     var r=await initSB(u,k);
     hideL();
-    // 成功・失敗に関わらずlogin画面へ（エラーはlogin画面内に表示）
     S.connErr=r.ok?'':(r.msg||'接続失敗');
   }else{
-    // キー未設定 → login画面でキー入力を促す
-    S.connErr='SB_KEYが設定されていません。下のフォームにAnon Keyを入力してください。';
+    S.connErr='SB_KEYが設定されていません。\nindex.htmlの137行目にAnon Keyを貼り付けてVercelに再デプロイしてください。';
   }
+  // 接続成功・失敗に関わらず常にlogin画面を表示
   S.view='login';
   render();
 })();
