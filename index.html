@@ -136,7 +136,6 @@ textarea.fi{resize:none;font-family:inherit;min-height:72px}
 ======================================================== */
 var SB_URL = 'https://dlkilajbabzbmbpratnq.supabase.co'; // Project URL
 var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRsa2lsYWpiYWJ6Ym1icHJhdG5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5ODIxOTksImV4cCI6MjA5NjU1ODE5OX0.zUqBH_5Boh1_NL98HinpQ8lGIK9GAujvra-FdXRdzO4';
-/* ======== グローバル変数 ======== */
 var _url = '', _key = '', isReady = false;
 var STORES = [], CATS = [], PRODUCTS = [], PSV = {}; // PSV: {product_id(num): [store_id(num),...]}
 var autoTimer = null, dateTimer = null;
@@ -816,19 +815,23 @@ function ckHV(){
 
 /* ======== ADMIN画面 ======== */
 function vAdmin(){
-  // 管理者画面は商品管理タブをデフォルトにする
   if(S.adminTab===undefined)S.adminTab=0;
+  // 商品管理タブ時は追加ボタンをタブ直下に固定表示
+  var addBtn=S.adminTab===0?
+    '<div style="padding:12px;border-bottom:2px solid var(--g);background:#fff">'+
+    '<button onclick="openProd(0)" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:16px;background:var(--g);color:#fff;border:none;border-radius:var(--r8);font-size:17px;font-weight:700;cursor:pointer;">'+
+    '<i class="ti ti-plus" style="font-size:20px"></i>＋ 発注項目を追加する</button></div>':'';
   return'<div class="app">'+
   '<div class="bar"><i class="ti ti-settings" style="font-size:22px;color:var(--o)"></i>'+
   '<div class="bar-t" style="flex:1">管理者</div>'+
   '<span style="font-size:12px;color:'+(isReady?'var(--g)':'var(--o)')+'">'+(isReady?'<span class="rdot"></span>接続済み':'未接続')+'</span>'+
   lbtn()+'</div>'+
-  '<div class="con">'+
   '<div class="tabs">'+
   ['商品管理','発注履歴','カテゴリー','店舗設定'].map(function(t,i){
-    // タブ順を変更：0=商品管理、1=発注履歴、2=カテゴリー、3=店舗設定
     return'<div class="tab'+(S.adminTab===i?' on':'')+'" onclick="S.adminTab='+i+';render()">'+t+'</div>';
   }).join('')+'</div>'+
+  addBtn+
+  '<div class="con" style="padding-bottom:calc(72px + var(--sb))">'+
   (S.adminTab===0?aProducts():S.adminTab===1?aHistory():S.adminTab===2?aCats():aStores())+
   '</div><nav class="nav"><button class="nb on"><i class="ti ti-settings"></i>管理</button></nav></div>';
 }
@@ -874,18 +877,13 @@ function aHistory(){
 function aProducts(){
   var active=PRODUCTS.filter(function(p){return p.is_active!==false;});
   var inactive=PRODUCTS.filter(function(p){return p.is_active===false;});
-  return'<div style="padding:12px">'+
-  '<button class="btn bg" onclick="openProd(0)" style="font-size:16px;padding:16px;margin-bottom:10px">'+
-  '<i class="ti ti-plus"></i>＋ 発注項目を追加する</button>'+
-  (isReady?
-    '<button onclick="reloadProds()" style="width:100%;padding:10px;background:var(--sf);border:1px solid var(--br);border-radius:var(--r8);font-size:13px;color:var(--m);cursor:pointer;margin-bottom:4px">'+
-    '<i class="ti ti-refresh" style="font-size:14px"></i> 最新データを再読み込み</button>':
-    '<div style="background:var(--ol);border:1px solid #FAC775;border-radius:var(--r8);padding:10px 12px;font-size:12px;color:var(--od);margin-bottom:6px">'+
-    '⚠️ デモモード：Supabase未接続のため保存はアプリ内のみです。接続すると全端末で共有されます。</div>')+
-  '</div>'+
-  '<div style="padding:0 12px 4px;display:flex;align-items:center;gap:8px">'+
-  '<div style="flex:1;font-size:14px;color:var(--m)">登録済み発注項目 '+active.length+'件（非表示 '+inactive.length+'件）</div>'+
-  '</div>'+
+  return(isReady?
+    '<div style="padding:8px 12px 4px">'+
+    '<button onclick="reloadProds()" style="width:100%;padding:10px;background:var(--sf);border:1px solid var(--br);border-radius:var(--r8);font-size:13px;color:var(--m);cursor:pointer">'+
+    '<i class="ti ti-refresh" style="font-size:14px"></i> 最新データを再読み込み</button></div>':
+    '<div style="background:var(--ol);border:1px solid #FAC775;border-radius:var(--r8);padding:10px 12px;font-size:12px;color:var(--od);margin:8px 12px">'+
+    '⚠️ デモモード：Supabase未接続のため保存はアプリ内のみです。</div>')+
+  '<div style="padding:4px 12px 4px;font-size:14px;color:var(--m)">登録済み発注項目 '+active.length+'件（非表示 '+inactive.length+'件）</div>'+
   '<div class="card" style="margin-top:4px">'+
   (active.length?active.map(function(p){
     var cat=CATS.find(function(c){return Number(c.id)===Number(p.category_id);});
@@ -902,8 +900,7 @@ function aProducts(){
     '<button class="btn bo bsm" onclick="openProd('+p.id+')" title="編集"><i class="ti ti-edit" style="font-size:13px"></i></button>'+
     '<button class="btn bgy bsm" onclick="tglActive('+p.id+',false)" title="非表示"><i class="ti ti-eye-off" style="font-size:13px"></i></button>'+
     '</div></div>';
-  }).join('')+'<div style="padding:8px 16px;font-size:12px;color:var(--h);border-top:1px solid var(--br)">'+
-  '鉛筆アイコン：編集　👁‍🗨アイコン：非表示にする</div>':
+  }).join(''):
   '<div class="emp">発注項目がありません。<br>上の「＋ 発注項目を追加する」から登録してください。</div>')+
   '</div>'+
   (inactive.length?'<div class="sl2" style="color:var(--gr);margin-top:8px">非表示の発注項目（'+inactive.length+'件）</div>'+
