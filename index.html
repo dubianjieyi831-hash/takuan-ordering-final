@@ -135,7 +135,7 @@ textarea.fi{resize:none;font-family:inherit;min-height:72px}
    Supabase → Settings → API から取得
 ======================================================== */
 var SB_URL = 'https://dlkilajbabzbmbpratnq.supabase.co'; // Project URL
-var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRsa2lsYWpiYWJ6Ym1icHJhdG5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5ODIxOTksImV4cCI6MjA5NjU1ODE5OX0.zUqBH_5Boh1_NL98HinpQ8lGIK9GAujvra-FdXRdzO4';
+var SB_KEY = '';  // anon public key（eyJ... または sb_publishable_...）
 
 /* ======== グローバル変数 ======== */
 var _url = '', _key = '', isReady = false;
@@ -275,17 +275,31 @@ async function loadMaster(){
 async function initSB(url,key){
   var u=cleanUrl(url), k=(key||'').replace(/[\s\r\n]/g,'');
   if(!u||!k)return{ok:false,msg:'URLとAnon Keyを入力してください'};
-  var r=await safeFetch(u+'/rest/v1/stores?select=id&limit=1',{
-    method:'GET',headers:{'Content-Type':'application/json','apikey':k,'Authorization':'Bearer '+k}
-  });
-  if(r.err)return{ok:false,msg:r.err};
-  if(r.status===401)return{ok:false,msg:'HTTP 401: Anon Keyが正しくありません。\nSettings → API → anon public を確認してください。'};
-  if(r.status===403)return{ok:false,msg:'HTTP 403: RLSエラー。supabase_final.sqlを再実行してください。'};
-  if(r.status===404)return{ok:false,msg:'HTTP 404: storesテーブルがありません。supabase_final.sqlを実行してください。'};
-  if(r.status>=400)return{ok:false,msg:'HTTP '+r.status};
-  _url=u;_key=k;isReady=true;
-  await loadMaster();
-  return{ok:true};
+
+  // sb_publishable_ 形式（新形式）とeyJ形式（JWT）の両方に対応
+  // 新形式: apikey と Authorization の両方に同じキーを送る（従来通り）
+  var headers={
+    'Content-Type':'application/json',
+    'apikey':k,
+    'Authorization':'Bearer '+k
+  };
+
+  var r=await safeFetch(u+'/rest/v1/stores?select=id&limit=1',{method:'GET',headers:headers});
+
+  // 詳細なエラー情報を取得
+  var bodyDetail='';
+  try{var bd=JSON.parse(r.body||'{}');bodyDetail=bd.message||bd.hint||bd.error||bd.msg||'';}catch(_){}
+
+  if(r.err)return{ok:false,msg:'ネットワークエラー: '+r.err+'\n（Vercel公開URLでのみ接続できます）'};
+  if(r.status===200||r.status===206){
+    _url=u;_key=k;isReady=true;
+    await loadMaster();
+    return{ok:true};
+  }
+  if(r.status===401)return{ok:false,msg:'HTTP 401: Anon Keyが認証されませんでした。\n\n【確認事項】\n① Supabase → Settings → API → anon public（publicと書かれた方）をコピー\n② service_role keyを使っていないか確認\n③ キーが途中で切れていないか確認\n\n詳細: '+(bodyDetail||'（なし）')};
+  if(r.status===403)return{ok:false,msg:'HTTP 403: RLSポリシーエラー。\nsupabase_final.sqlを再実行してください。\n詳細: '+(bodyDetail||'（なし）')};
+  if(r.status===404)return{ok:false,msg:'HTTP 404: storesテーブルがありません。\nsupabase_final.sqlを実行してください。'};
+  return{ok:false,msg:'HTTP '+r.status+(bodyDetail?': '+bodyDetail:'')};
 }
 
 /* ======== 状態 ======== */
@@ -373,10 +387,12 @@ function vLogin(){
     '<div style="display:flex;align-items:center;gap:6px;background:var(--gl);border:1px solid var(--gm);border-radius:var(--r8);padding:8px 14px;margin-bottom:16px;max-width:380px;width:100%;font-size:13px;color:var(--gd)">'+
     '<span class="rdot"></span>Supabase接続済み</div>':
     '<div style="background:var(--rl);border:1px solid #F7C1C1;border-radius:var(--r8);padding:12px 14px;margin-bottom:16px;max-width:380px;width:100%">'+
-    '<div style="font-size:14px;font-weight:600;color:#791F1F;margin-bottom:6px"><i class="ti ti-alert-circle"></i> Supabase未接続</div>'+
-    '<div style="font-size:13px;color:#791F1F;line-height:1.7;margin-bottom:10px;white-space:pre-wrap">'+esc(S.connErr||'SB_KEYが設定されていません')+'</div>'+
-    '<div style="font-size:12px;color:#791F1F;background:rgba(255,255,255,.6);border-radius:6px;padding:8px 10px;font-family:monospace;line-height:1.8">'+
-    '【対処方法】<br>index.htmlの以下の行を編集してください：<br>var SB_KEY = \'★ここにanon public keyを貼る★\';</div></div>')+
+    '<div style="font-size:14px;font-weight:600;color:#791F1F;margin-bottom:8px"><i class="ti ti-alert-circle"></i> Supabase接続エラー</div>'+
+    '<div style="font-size:13px;color:#791F1F;line-height:1.8;margin-bottom:10px;white-space:pre-wrap">'+esc(S.connErr||'SB_KEYが設定されていません')+'</div>'+
+    '<div style="font-size:11px;color:#791F1F;background:rgba(255,255,255,.7);border-radius:6px;padding:8px 10px;font-family:monospace;line-height:1.9">'+
+    'SB_URL: '+esc((SB_URL||'（未設定）').substring(0,50))+'<br>'+
+    'SB_KEY: '+esc(SB_KEY?SB_KEY.substring(0,20)+'...（'+SB_KEY.length+'文字）':'（未設定）')+'<br>'+
+    '→ index.html 138行目のSB_KEYを確認してください</div></div>')+
   '<div class="lcard">'+
   '<div style="font-size:12px;font-weight:600;color:var(--m);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">役割を選択</div>'+
   rBtn('mgr','ti-building-store','#E1F5EE','var(--g)','店長','発注・履歴確認')+
