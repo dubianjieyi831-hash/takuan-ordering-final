@@ -135,7 +135,10 @@ textarea.fi{resize:none;font-family:inherit;min-height:72px}
    Supabase → Settings → API から取得
 ======================================================== */
 var SB_URL = 'https://dlkilajbabzbmbpratnq.supabase.co'; // Project URL
-var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRsa2lsYWpiYWJ6Ym1icHJhdG5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5ODIxOTksImV4cCI6MjA5NjU1ODE5OX0.zUqBH_5Boh1_NL98HinpQ8lGIK9GAujvra-FdXRdzO4'; 
+var SB_KEY = '';  // anon public key（eyJ... または sb_publishable_...）
+
+/* ======== グローバル変数 ======== */
+var _url = '', _key = '', isReady = false;
 var STORES = [], CATS = [], PRODUCTS = [], PSV = {}; // PSV: {product_id(num): [store_id(num),...]}
 var autoTimer = null, dateTimer = null;
 
@@ -235,7 +238,7 @@ Q.prototype._exec=function(){
 };
 var DB={from:function(tbl){return new Q(tbl);}};
 
-/* ======== マスターデータ取得 ======== */
+/* ======== マスターデータ取得（safeFetch直接使用でDB.thenのawait問題を回避） ======== */
 async function loadMaster(){
   if(!isReady)return;
   var h={'Content-Type':'application/json','apikey':_key,'Authorization':'Bearer '+_key};
@@ -246,24 +249,25 @@ async function loadMaster(){
   }catch(_){}
   // categories
   try{
-    var rc=await DB.from('categories').select('*').eq('is_active',true).order('display_order').limit(100);
-    if(!rc.error&&rc.data)CATS=rc.data.map(function(c){return Object.assign({},c,{id:Number(c.id)});});
+    var rc=await safeFetch(_url+'/rest/v1/categories?select=*&is_active=eq.true&order=display_order.asc&limit=100',{method:'GET',headers:h});
+    if(!rc.err&&rc.ok){var d=JSON.parse(rc.body||'[]');if(Array.isArray(d))CATS=d.map(function(c){return Object.assign({},c,{id:Number(c.id)});});}
   }catch(_){}
   // products
   try{
-    var rp=await DB.from('products').select('*').order('display_order').limit(1000);
-    if(!rp.error&&rp.data)PRODUCTS=rp.data.map(function(p){return Object.assign({},p,{id:Number(p.id),category_id:p.category_id?Number(p.category_id):null});});
+    var rp=await safeFetch(_url+'/rest/v1/products?select=*&order=display_order.asc&limit=1000',{method:'GET',headers:h});
+    if(!rp.err&&rp.ok){var d=JSON.parse(rp.body||'[]');if(Array.isArray(d))PRODUCTS=d.map(function(p){return Object.assign({},p,{id:Number(p.id),category_id:p.category_id?Number(p.category_id):null});});}
   }catch(_){}
-  // PSV（数値キー・数値値で統一）
+  // PSV
   try{
-    var rv=await DB.from('product_store_visibility').select('product_id,store_id,is_visible').limit(5000);
-    if(!rv.error&&rv.data){
+    var rv=await safeFetch(_url+'/rest/v1/product_store_visibility?select=product_id,store_id,is_visible&limit=5000',{method:'GET',headers:h});
+    if(!rv.err&&rv.ok){
+      var d=JSON.parse(rv.body||'[]');
       PSV={};
-      rv.data.filter(function(r){return r.is_visible;}).forEach(function(r){
+      if(Array.isArray(d)){d.filter(function(r){return r.is_visible;}).forEach(function(r){
         var pid=Number(r.product_id),sid=Number(r.store_id);
         if(!PSV[pid])PSV[pid]=[];
         PSV[pid].push(sid);
-      });
+      });}
     }
   }catch(_){}
 }
@@ -474,17 +478,19 @@ async function doLogin(){
   render();
 }
 
-/* ======== データ取得 ======== */
+/* ======== データ取得（safeFetch直接使用・awaitフリーズ防止） ======== */
 async function fetchToday(){
   var today=jst.iso;
   if(!isReady){S.todayOrders=[];return;}
+  var h={'Content-Type':'application/json','apikey':_key,'Authorization':'Bearer '+_key};
   try{
-    var r=await DB.from('orders').select('*').eq('order_date',today).order('created_at',{ascending:false});
-    if(r.error)throw new Error(safeMsg(r.error));
-    var orders=r.data||[];
-    if(!orders.length){S.todayOrders=[];return;}
-    var r2=await DB.from('order_items').select('*').in('order_id',orders.map(function(o){return o.id;}));
-    var items=r2.data||[];
+    var r=await safeFetch(_url+'/rest/v1/orders?select=*&order_date=eq.'+today+'&order=created_at.desc',{method:'GET',headers:h});
+    if(r.err||!r.ok){S.todayOrders=[];return;}
+    var orders=JSON.parse(r.body||'[]');
+    if(!Array.isArray(orders)||!orders.length){S.todayOrders=[];return;}
+    var ids=orders.map(function(o){return o.id;}).join(',');
+    var r2=await safeFetch(_url+'/rest/v1/order_items?select=*&order_id=in.('+ids+')',{method:'GET',headers:h});
+    var items=(!r2.err&&r2.ok)?JSON.parse(r2.body||'[]'):[];
     S.todayOrders=orders.map(function(o){
       return Object.assign({},o,{store_id:Number(o.store_id),id:Number(o.id),
         items:items.filter(function(i){return Number(i.order_id)===Number(o.id);})});
@@ -493,19 +499,21 @@ async function fetchToday(){
 }
 async function fetchAdmin(){
   if(!isReady){S.adminOrders=[];return;}
+  var h={'Content-Type':'application/json','apikey':_key,'Authorization':'Bearer '+_key};
   try{
     var f=S.af;
-    var q=DB.from('orders').select('*').order('order_date',{ascending:false}).limit(500);
-    if(f.from)q=q.gte('order_date',f.from);
-    if(f.to)q=q.lte('order_date',f.to);
-    if(f.sid)q=q.eq('store_id',Number(f.sid));
-    if(f.status)q=q.eq('status',f.status);
-    var r=await q;
-    if(r.error)throw new Error(safeMsg(r.error));
-    var orders=r.data||[];
-    if(!orders.length){S.adminOrders=[];return;}
-    var r2=await DB.from('order_items').select('*').in('order_id',orders.map(function(o){return o.id;}));
-    var items=r2.data||[];
+    var qs=['select=*','order=order_date.desc','limit=500'];
+    if(f.from)qs.push('order_date=gte.'+f.from);
+    if(f.to)qs.push('order_date=lte.'+f.to);
+    if(f.sid)qs.push('store_id=eq.'+Number(f.sid));
+    if(f.status)qs.push('status=eq.'+encodeURIComponent(f.status));
+    var r=await safeFetch(_url+'/rest/v1/orders?'+qs.join('&'),{method:'GET',headers:h});
+    if(r.err||!r.ok){S.adminOrders=[];return;}
+    var orders=JSON.parse(r.body||'[]');
+    if(!Array.isArray(orders)||!orders.length){S.adminOrders=[];return;}
+    var ids=orders.map(function(o){return o.id;}).join(',');
+    var r2=await safeFetch(_url+'/rest/v1/order_items?select=*&order_id=in.('+ids+')',{method:'GET',headers:h});
+    var items=(!r2.err&&r2.ok)?JSON.parse(r2.body||'[]'):[];
     var res=orders.map(function(o){return Object.assign({},o,{store_id:Number(o.store_id),id:Number(o.id),items:items.filter(function(i){return Number(i.order_id)===Number(o.id);})});});
     if(f.kw){var kw=f.kw;res=res.filter(function(o){return(o.store_name||'').includes(kw)||(o.memo||'').includes(kw)||(o.items||[]).some(function(i){return i.product_name.includes(kw);});});}
     S.adminOrders=res;
@@ -513,13 +521,15 @@ async function fetchAdmin(){
 }
 async function fetchHist(){
   if(!isReady){S.histOrders=[];return;}
+  var h={'Content-Type':'application/json','apikey':_key,'Authorization':'Bearer '+_key};
   try{
-    var r=await DB.from('orders').select('*').lt('order_date',jst.iso).order('order_date',{ascending:false}).limit(200);
-    if(r.error){S.histOrders=[];return;}
-    var orders=r.data||[];
-    if(!orders.length){S.histOrders=[];return;}
-    var r2=await DB.from('order_items').select('*').in('order_id',orders.map(function(o){return o.id;}));
-    var items=r2.data||[];
+    var r=await safeFetch(_url+'/rest/v1/orders?select=*&order_date=lt.'+jst.iso+'&order=order_date.desc&limit=200',{method:'GET',headers:h});
+    if(r.err||!r.ok){S.histOrders=[];return;}
+    var orders=JSON.parse(r.body||'[]');
+    if(!Array.isArray(orders)||!orders.length){S.histOrders=[];return;}
+    var ids=orders.map(function(o){return o.id;}).join(',');
+    var r2=await safeFetch(_url+'/rest/v1/order_items?select=*&order_id=in.('+ids+')',{method:'GET',headers:h});
+    var items=(!r2.err&&r2.ok)?JSON.parse(r2.body||'[]'):[];
     S.histOrders=orders.map(function(o){return Object.assign({},o,{store_id:Number(o.store_id),items:items.filter(function(i){return Number(i.order_id)===Number(o.id);})});});
   }catch(_){S.histOrders=[];}
 }
