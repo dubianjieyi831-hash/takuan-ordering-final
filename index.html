@@ -135,7 +135,9 @@ textarea.fi{resize:none;font-family:inherit;min-height:72px}
    Supabase → Settings → API から取得
 ======================================================== */
 var SB_URL = 'https://dlkilajbabzbmbpratnq.supabase.co'; // Project URL
-var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRsa2lsYWpiYWJ6Ym1icHJhdG5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5ODIxOTksImV4cCI6MjA5NjU1ODE5OX0.zUqBH_5Boh1_NL98HinpQ8lGIK9GAujvra-FdXRdzO4';
+var SB_KEY = '';  // anon public key（eyJ... または sb_publishable_...）
+
+/* ======== グローバル変数 ======== */
 var _url = '', _key = '', isReady = false;
 var STORES = [], CATS = [], PRODUCTS = [], PSV = {}; // PSV: {product_id(num): [store_id(num),...]}
 var autoTimer = null, dateTimer = null;
@@ -305,8 +307,8 @@ var S={
   view:'login',
   role:null,storeId:null,storeErr:'',
   connErr:'',
-  phase:'home',   // home|order|confirm|success|noorder_confirm|noorder_done|history
-  qty:{},memo:'',catOpen:{},
+  phase:'home',
+  qty:{},memo:'',catOpen:{},orderDate:'',  // orderDate: 発注対象日（YYYY-MM-DD）
   ckTab:0,detail:null,ckChecked:{},showHist:false,histOrders:[],
   todayOrders:[],
   adminTab:0,adminOrders:[],
@@ -316,6 +318,15 @@ var S={
 
 /* ======== ヘルパー ======== */
 var SD=function(){return STORES.find(function(s){return Number(s.id)===Number(S.storeId);});};
+/* 発注対象日（空なら今日）を返す */
+function getOrderDate(){return S.orderDate||jst.iso;}
+/* 発注対象日の表示文字列を返す */
+function getOrderDateDisp(iso){
+  if(!iso)iso=getOrderDate();
+  var p=iso.split('-').map(Number);var y=p[0],mo=p[1],d=p[2];
+  var w=new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',weekday:'short'}).format(new Date(y,mo-1,d));
+  return y+'年'+mo+'月'+d+'日（'+w+'）';
+}
 function getStore(){
   var st=SD();
   if(!st)st=STORES.find(function(s){return String(s.id)===String(S.storeId);});
@@ -572,15 +583,23 @@ function mOrder(){
   var late=isLate();
   var st=getStore();
   var dl=st.deadline_time||'--:--';
+  var od=getOrderDate();
   var catIds=[],seen={};prods.forEach(function(p){if(!seen[p.category_id]){seen[p.category_id]=true;catIds.push(p.category_id);}});
   var catMap={};CATS.forEach(function(c){catMap[c.id]=c;});
-  var h=late?'<div class="al aw"><i class="ti ti-clock"></i><span>締切（'+dl+'）を過ぎています。締切後発注として記録されます。</span></div>':
-           '<div class="al aok"><i class="ti ti-clock"></i><span>発注締切：本日 <strong>'+dl+'</strong> まで</span></div>';
+  // 発注対象日選択バナー
+  var dateBanner='<div style="margin:8px 12px;padding:12px 14px;background:#fff;border:2px solid var(--g);border-radius:var(--r8);display:flex;align-items:center;gap:10px">'+
+  '<div style="flex:1"><div style="font-size:12px;color:var(--m);font-weight:600;margin-bottom:2px">発注対象日</div>'+
+  '<div style="font-size:16px;font-weight:700;color:var(--g)">'+getOrderDateDisp(od)+'</div></div>'+
+  '<input type="date" value="'+od+'" min="'+jst.iso+'" style="border:1.5px solid var(--br);border-radius:6px;padding:8px 10px;font-size:14px;color:var(--t);background:#fff;cursor:pointer" onchange="S.orderDate=this.value;render()">'+
+  '</div>';
+  var h=dateBanner+(late&&od===jst.iso?'<div class="al aw"><i class="ti ti-clock"></i><span>締切（'+dl+'）を過ぎています。締切後発注として記録されます。</span></div>':
+    od===jst.iso?'<div class="al aok"><i class="ti ti-clock"></i><span>発注締切：本日 <strong>'+dl+'</strong> まで</span></div>':
+    '<div class="al ai"><i class="ti ti-calendar"></i><span>'+getOrderDateDisp(od)+'分の発注を入力中</span></div>');
   if(!prods.length){
     return h+'<div style="margin:16px 12px"><div class="al aw"><i class="ti ti-package-off"></i>'+
     '<span>この店舗に表示できる商品がまだ登録されていません。<br>管理者に商品設定を依頼してください。</span></div></div>'+
     '<div style="display:flex;flex-direction:column;gap:8px;padding:0 12px;margin-bottom:16px">'+
-    '<button class="btn bb" onclick="go(\'noorder_confirm\')"><i class="ti ti-ban"></i>本日は発注なし</button>'+
+    '<button class="btn bb" onclick="go(\'noorder_confirm\')"><i class="ti ti-ban"></i>発注なしを送信</button>'+
     '<button class="btn bgy" onclick="go(\'home\')"><i class="ti ti-arrow-left"></i>ホームに戻る</button></div>';
   }
   catIds.forEach(function(catId){
@@ -615,11 +634,13 @@ function mOrder(){
 }
 function mConfirm(){
   var late=isLate();
+  var od=getOrderDate();
+  var isToday=od===jst.iso;
   var items=PRODUCTS.filter(function(p){return(S.qty[p.id]||0)>0;});
   return'<div style="padding:16px 12px 8px">'+
-  '<div style="font-size:20px;font-weight:700;margin-bottom:4px">発注内容の確認</div>'+
-  '<div style="font-size:13px;color:var(--m)">'+jst.disp+(late?' 【締切後発注】':'')+'</div></div>'+
-  (late?'<div class="al aw"><i class="ti ti-alert-triangle"></i><span>締切後発注として記録されます。</span></div>':'')+
+  '<div style="font-size:20px;font-weight:700;margin-bottom:6px">発注内容の確認</div>'+
+  '<div style="margin-bottom:6px"><span style="background:var(--gl);color:var(--gd);font-weight:600;padding:4px 12px;border-radius:20px;font-size:13px"><i class="ti ti-calendar" style="font-size:12px"></i> 発注対象日：'+getOrderDateDisp(od)+'</span></div>'+
+  (late&&isToday?'<div class="al aw"><i class="ti ti-alert-triangle"></i><span>締切後発注として記録されます。</span></div>':'')+
   '<div class="card" style="margin-top:8px">'+
   items.map(function(p){return'<div class="ro"><span class="rn">'+esc(p.name)+'</span><span class="rq">'+S.qty[p.id]+' '+esc(p.unit)+'</span></div>';}).join('')+
   (S.memo?'<div class="ro"><span class="rn" style="color:var(--m)">メモ</span><span style="font-size:14px;color:var(--m)">'+esc(S.memo)+'</span></div>':'')+
@@ -628,20 +649,26 @@ function mConfirm(){
   '<button class="btn bgy" onclick="go(\'order\')"><i class="ti ti-arrow-left"></i>修正する</button></div>';
 }
 function mSuccess(){
+  var od=getOrderDate();
   var items=PRODUCTS.filter(function(p){return(S.qty[p.id]||0)>0;});
   return'<div class="sw">'+
   '<div class="si" style="background:var(--gl)"><i class="ti ti-circle-check" style="font-size:52px;color:var(--g)"></i></div>'+
   '<div class="sh2" style="color:var(--g)">発注がCKに送信されました！</div>'+
-  '<div style="font-size:14px;color:var(--m);line-height:1.7">'+jst.disp+'</div></div>'+
+  '<div style="margin-bottom:6px"><span style="background:var(--gl);color:var(--gd);font-weight:600;padding:4px 12px;border-radius:20px;font-size:13px">発注対象日：'+getOrderDateDisp(od)+'</span></div>'+
+  '</div>'+
   '<div class="card"><div class="ch"><div class="ct">発注内容</div></div>'+
   items.map(function(p){return'<div class="ro"><span class="rn">'+esc(p.name)+'</span><span class="rq">'+S.qty[p.id]+' '+esc(p.unit)+'</span></div>';}).join('')+'</div>'+
-  '<div style="padding:0 12px;margin-top:12px;margin-bottom:16px"><button class="btn bgy" onclick="go(\'home\')"><i class="ti ti-home"></i>ホームに戻る</button></div>';
+  '<div style="padding:0 12px;margin-top:12px;margin-bottom:16px;display:flex;flex-direction:column;gap:8px">'+
+  '<button class="btn bo" onclick="nextDateOrder()"><i class="ti ti-calendar-plus"></i>別の日付の発注を続ける</button>'+
+  '<button class="btn bgy" onclick="go(\'home\')"><i class="ti ti-home"></i>ホームに戻る</button></div>';
 }
 function mNoConf(){
+  var od=getOrderDate();
   return'<div style="padding:48px 24px;text-align:center">'+
-  '<div style="width:80px;height:80px;background:var(--bl);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px"><i class="ti ti-ban" style="font-size:42px;color:var(--b)"></i></div>'+
-  '<div style="font-size:20px;font-weight:700;margin-bottom:8px;line-height:1.4">本日は発注なし<br>でよいですか？</div>'+
-  '<div style="font-size:14px;color:var(--m);margin-bottom:32px">CK担当者に「本日は発注なし」と連絡されます。</div>'+
+  '<div style="width:80px;height:80px;background:var(--bl);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px"><i class="ti ti-ban" style="font-size:42px;color:var(--b)"></i></div>'+
+  '<div style="font-size:20px;font-weight:700;margin-bottom:6px;line-height:1.4">発注なし　でよいですか？</div>'+
+  '<div style="margin-bottom:16px"><span style="background:var(--bl);color:var(--bd);font-weight:600;padding:4px 12px;border-radius:20px;font-size:13px">発注対象日：'+getOrderDateDisp(od)+'</span></div>'+
+  '<div style="font-size:14px;color:var(--m);margin-bottom:28px">CK担当者に「発注なし」と連絡されます。</div>'+
   '<div style="display:flex;flex-direction:column;gap:10px">'+
   '<button class="btn bb" onclick="doNo()" style="font-size:17px;padding:17px"><i class="ti ti-send"></i>発注なしを送信する</button>'+
   '<button class="btn bgy" onclick="go(\'home\')"><i class="ti ti-arrow-left"></i>戻る</button></div></div>';
@@ -674,15 +701,26 @@ function openHistory(){
 
 /* ======== CK画面 ======== */
 function vCK(){
+  // CKの表示対象日（未設定なら今日）
+  if(!S.ckDate)S.ckDate=jst.iso;
+  var filteredOrders=S.todayOrders.filter(function(o){return o.order_date===S.ckDate;});
   var sm={};STORES.forEach(function(s){sm[s.id]='unconfirmed';});
-  S.todayOrders.forEach(function(o){sm[Number(o.store_id)]=o.status;});
+  filteredOrders.forEach(function(o){sm[Number(o.store_id)]=o.status;});
   var unc=STORES.filter(function(s){return sm[s.id]==='unconfirmed';});
+  var isToday=S.ckDate===jst.iso;
   return'<div class="app">'+
   '<div class="bar"><i class="ti ti-package" style="font-size:22px;color:var(--b)"></i>'+
-  '<div style="flex:1"><div class="bar-t">CK管理　本日の発注状況</div>'+
-  '<div class="bar-s">'+(isReady?'<span class="rdot"></span>30秒自動更新 ｜ ':'')+jst.disp+'</div></div>'+lbtn()+'</div>'+
+  '<div style="flex:1"><div class="bar-t">CK管理</div>'+
+  '<div class="bar-s">'+(isReady?'<span class="rdot"></span>自動更新中 ｜ ':'')+jst.disp+'</div></div>'+lbtn()+'</div>'+
+  // 発注対象日フィルター
+  '<div style="padding:8px 12px;background:#fff;border-bottom:1px solid var(--br);display:flex;align-items:center;gap:8px">'+
+  '<i class="ti ti-calendar" style="font-size:16px;color:var(--b)"></i>'+
+  '<div style="font-size:13px;font-weight:600;color:var(--m)">表示する発注対象日</div>'+
+  '<input type="date" value="'+S.ckDate+'" style="margin-left:auto;border:1.5px solid var(--br);border-radius:6px;padding:6px 10px;font-size:13px;color:var(--t);background:#fff;cursor:pointer" onchange="changeCkDate(this.value)">'+
+  (isToday?'':' <button onclick="S.ckDate=jst.iso;render()" style="background:none;border:1px solid var(--b);border-radius:6px;padding:5px 8px;font-size:11px;color:var(--b);cursor:pointer">今日に戻る</button>')+
+  '</div>'+
   '<div class="con">'+
-  (S.showHist?ckHV():ckMain(unc,sm))+
+  (S.showHist?ckHV():ckMainFiltered(unc,sm,filteredOrders))+
   '</div>'+
   '<nav class="nav">'+
   '<button class="nb'+(S.ckTab===0&&!S.showHist?' on':'')+'" onclick="S.ckTab=0;S.showHist=false;render()"><i class="ti ti-layout-list"></i>店舗状況</button>'+
@@ -691,12 +729,36 @@ function vCK(){
   '</nav>'+
   (S.detail!=null&&!S.showHist?ckDet(sm):'')+'</div>';
 }
-function ckMain(unc,sm){
-  return'<div class="tabs">'+
+function changeCkDate(d){
+  S.ckDate=d;
+  // 選択した日付のデータを取得（todayOrdersに含まれていない場合はfetch）
+  var has=S.todayOrders.some(function(o){return o.order_date===d;});
+  if(!has&&isReady){
+    showL('発注データを取得中…');
+    DB.from('orders').select('*').eq('order_date',d).order('created_at',{ascending:false}).then(function(r){
+      if(!r.error&&r.data&&r.data.length){
+        var ids=r.data.map(function(o){return o.id;});
+        DB.from('order_items').select('*').in('order_id',ids).then(function(r2){
+          var items=r2.data||[];
+          r.data.forEach(function(o){
+            if(!S.todayOrders.find(function(x){return Number(x.id)===Number(o.id);})){
+              S.todayOrders.push(Object.assign({},o,{store_id:Number(o.store_id),id:Number(o.id),items:items.filter(function(i){return Number(i.order_id)===Number(o.id);})}));
+            }
+          });
+          hideL();render();
+        });
+      }else{hideL();render();}
+    });
+  }else{render();}
+}
+function ckMainFiltered(unc,sm,filteredOrders){
+  var dateLabel=S.ckDate===jst.iso?'本日（'+jst.disp+'）':getOrderDateDisp(S.ckDate);
+  return'<div class="al ai" style="margin:8px 12px 4px"><i class="ti ti-calendar"></i><span>表示中：<strong>'+dateLabel+'</strong>分の発注</span></div>'+
+  '<div class="tabs">'+
   ['店舗状況','商品合計','出荷管理'].map(function(t,i){return'<div class="tab'+(S.ckTab===i?' on':'')+'" onclick="S.ckTab='+i+';render()">'+t+'</div>';}).join('')+'</div>'+
   (unc.length?'<div class="al aw"><i class="ti ti-alert-triangle"></i><span>未確認：'+unc.map(function(s){return esc(s.short_name||s.name);}).join('、')+'（'+unc.length+'店舗）</span></div>':
   '<div class="al aok"><i class="ti ti-circle-check"></i><span>全店舗から連絡が届いています</span></div>')+
-  (S.ckTab===0?ckSt(sm):S.ckTab===1?ckTo():ckSh())+
+  (S.ckTab===0?ckSt(sm):S.ckTab===1?ckToFiltered(filteredOrders):ckShFiltered(filteredOrders))+
   '<div style="text-align:center;padding:6px 0 2px;font-size:11px;color:var(--h)">'+
   (isReady?'30秒ごとに自動更新 ':'')+
   '<button onclick="doRef()" style="background:none;border:none;color:var(--g);cursor:pointer;font-size:11px;margin-left:6px;text-decoration:underline">今すぐ更新</button></div>'+
@@ -730,9 +792,10 @@ function ckSt(sm){
   });
   return h;
 }
-function ckTo(){
+function ckTo(){return ckToFiltered(S.todayOrders);}
+function ckToFiltered(orders){
   var tot={};
-  S.todayOrders.filter(function(o){return o.status!=='no_order';}).forEach(function(o){
+  orders.filter(function(o){return o.status!=='no_order';}).forEach(function(o){
     (o.items||[]).forEach(function(i){
       var k=i.product_name+'||'+i.unit;
       var pr=PRODUCTS.find(function(p){return p.name===i.product_name;});
@@ -740,9 +803,9 @@ function ckTo(){
       tot[k].qty+=Number(i.quantity);
     });
   });
-  var n=S.todayOrders.filter(function(o){return o.status!=='no_order';}).length;
-  var h='<div style="padding:10px 12px 4px;font-size:13px;color:var(--m)">発注店舗の合計（本日 '+n+'店舗）</div>';
-  if(!Object.keys(tot).length)return h+'<div class="emp">本日の発注データがありません</div>';
+  var n=orders.filter(function(o){return o.status!=='no_order';}).length;
+  var h='<div style="padding:10px 12px 4px;font-size:13px;color:var(--m)">発注店舗の合計（'+n+'店舗）</div>';
+  if(!Object.keys(tot).length)return h+'<div class="emp">この日の発注データがありません</div>';
   CATS.forEach(function(cat){
     var items=Object.values(tot).filter(function(t){return Number(t.catId)===Number(cat.id);});
     if(!items.length)return;
@@ -753,8 +816,9 @@ function ckTo(){
   if(other.length)h+='<div class="sl2">その他</div><div class="card" style="margin-top:0">'+other.map(function(i){return'<div class="ro"><span class="rn">'+esc(i.name)+'</span><span class="rq">'+i.qty+' '+esc(i.unit)+'</span></div>';}).join('')+'</div>';
   return h;
 }
-function ckSh(){
-  var list=S.todayOrders.filter(function(o){return o.status!=='no_order';});
+function ckSh(){return ckShFiltered(S.todayOrders);}
+function ckShFiltered(orders){
+  var list=orders.filter(function(o){return o.status!=='no_order';});
   if(!list.length)return'<div class="emp">本日発注のある店舗はありません</div>';
   return list.map(function(o){
     var st=STORES.find(function(s){return Number(s.id)===Number(o.store_id);});
@@ -868,7 +932,10 @@ function aHistory(){
     return'<div style="padding:13px 16px;border-bottom:1px solid var(--br)'+(isTd?';background:#FAFFFD':'')+'">'+'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'+
     '<div style="font-size:14px;font-weight:600;flex:1">'+esc(o.store_name)+'</div>'+
     (isTd?'<span style="font-size:11px;background:var(--gl);color:var(--gd);padding:2px 6px;border-radius:4px;font-weight:600">本日</span>':'')+bdg(o.status)+'</div>'+
-    '<div style="font-size:12px;color:var(--m);margin-bottom:6px">'+o.order_date+' '+t+' ｜ '+(o.items&&o.items.length?o.items.length+'品目':'発注なし')+(o.is_late?' ｜ <span style="color:var(--o)">締切後</span>':'')+'</div>'+
+    '<div style="font-size:12px;color:var(--m);margin-bottom:4px">'+
+    '<span style="background:var(--sf);border:1px solid var(--br);padding:2px 8px;border-radius:4px;font-weight:600">発注対象日：'+o.order_date+'</span>'+
+    ' 送信：'+o.order_date.substring(5)===new Date(o.created_at).toLocaleDateString('ja-JP',{timeZone:'Asia/Tokyo',month:'2-digit',day:'2-digit'}).replace('/','-')?'':'別日送信 | '+
+    t+(o.is_late?' ｜ <span style="color:var(--o)">締切後</span>':'')+'</div>'+
     (o.items&&o.items.length?'<div style="display:flex;flex-wrap:wrap;gap:4px">'+o.items.slice(0,6).map(function(i){return'<span style="font-size:11px;background:var(--sf);border:1px solid var(--br);border-radius:4px;padding:2px 6px">'+esc(i.product_name)+' '+i.quantity+esc(i.unit)+'</span>';}).join('')+(o.items.length>6?'<span style="font-size:11px;color:var(--h)">他'+( o.items.length-6)+'件</span>':'')+'</div>':'')+
     (o.memo?'<div style="font-size:12px;color:var(--m);margin-top:4px">📝 '+esc(o.memo)+'</div>':'')+'</div>';
   }).join(''):'<div class="emp">条件に一致する発注がありません</div>')+
@@ -1237,7 +1304,7 @@ function lbtn(){return'<button onclick="doOut()" style="border:1px solid var(--b
 function doOut(){
   if(autoTimer){clearInterval(autoTimer);autoTimer=null;}
   if(dateTimer){clearInterval(dateTimer);dateTimer=null;}
-  S={view:'login',role:null,storeId:null,storeErr:'',phase:'home',qty:{},memo:'',catOpen:{},
+  S={view:'login',role:null,storeId:null,storeErr:'',connErr:'',phase:'home',qty:{},memo:'',catOpen:{},orderDate:'',
     ckTab:0,detail:null,ckChecked:{},showHist:false,histOrders:[],todayOrders:[],
     adminTab:0,adminOrders:[],af:{from:'',to:'',sid:'',status:'',kw:''},
     submitting:false,modal:null,setupErr:''};
@@ -1249,20 +1316,42 @@ function inc(id,mn){id=Number(id);mn=Number(mn)||1;S.qty[id]=Math.round(((S.qty[
 function dec(id,mn){id=Number(id);mn=Number(mn)||1;S.qty[id]=Math.max(0,Math.round(((S.qty[id]||0)-mn)*1000)/1000);render();}
 function setQ(id,v,mn){id=Number(id);mn=Number(mn)||1;var n=parseFloat(v)||0;S.qty[id]=Math.max(0,Math.round(n/mn)*mn);render();}
 function goC(){var m=$('mi');if(m)S.memo=m.value.trim();S.phase='confirm';render();}
+/* 次の日付の発注へ：翌日を選択して発注画面へ */
+function nextDateOrder(){
+  var cur=getOrderDate();
+  var d=new Date(cur+'T00:00:00');d.setDate(d.getDate()+1);
+  var y=d.getFullYear(),mo=String(d.getMonth()+1).padStart(2,'0'),dy=String(d.getDate()).padStart(2,'0');
+  S.orderDate=y+'-'+mo+'-'+dy;
+  S.qty={};S.memo='';S.phase='order';render();
+}
 
 async function doSub(){
   if(S.submitting)return;S.submitting=true;
   var btn=$('sub');if(btn)btn.disabled=true;
-  showL('発注をCKに送信中…');
+  var od=getOrderDate();
   var items=PRODUCTS.filter(function(p){return(S.qty[Number(p.id)]||0)>0;}).map(function(p){
     return{product_id:Number(p.id),product_name:p.name,quantity:S.qty[Number(p.id)],unit:p.unit};
   });
-  var late=isLate(),st=getStore();
-  var pl={store_id:Number(S.storeId),store_name:st.name||('店舗'+S.storeId),order_date:jst.iso,status:late?'late':'ordered',memo:S.memo||'',is_late:late,created_by:st.manager_name||'店長'};
+  var late=isLate()&&od===jst.iso;
+  var st=getStore();
+  // 同日重複チェック
+  var existing=S.todayOrders.find(function(o){return Number(o.store_id)===Number(S.storeId)&&o.order_date===od&&o.status!=='no_order';});
+  if(existing){
+    S.submitting=false;if(btn)btn.disabled=false;
+    if(!confirm('【'+getOrderDateDisp(od)+'】の発注はすでに送信されています。\n上書きして再送信しますか？\n（既存の発注は削除されます）')){render();return;}
+    // 既存発注を削除
+    if(isReady&&typeof existing.id==='number'){
+      await DB.from('order_items').delete().eq('order_id',existing.id);
+      await DB.from('orders').delete().eq('id',existing.id);
+    }
+    S.todayOrders=S.todayOrders.filter(function(o){return!(Number(o.store_id)===Number(S.storeId)&&o.order_date===od);});
+    S.submitting=true;
+  }
+  showL('発注をCKに送信中…');
+  var pl={store_id:Number(S.storeId),store_name:st.name||('店舗'+S.storeId),order_date:od,status:late?'late':'ordered',memo:S.memo||'',is_late:late,created_by:st.manager_name||'店長'};
   try{
     if(!isReady){
       var d=Object.assign({id:Date.now()},pl,{created_at:new Date().toISOString(),items:items.map(function(i){return{product_name:i.product_name,quantity:i.quantity,unit:i.unit};})});
-      S.todayOrders=S.todayOrders.filter(function(o){return Number(o.store_id)!==Number(S.storeId);});
       S.todayOrders.push(d);
     }else{
       var ro=await DB.from('orders').insert(pl).select('*');
@@ -1273,10 +1362,10 @@ async function doSub(){
         var ri=await DB.from('order_items').insert(items.map(function(i){return Object.assign({},i,{order_id:oid});}));
         if(ri.error)throw new Error(safeMsg(ri.error));
       }
-      S.todayOrders=S.todayOrders.filter(function(o){return Number(o.store_id)!==Number(S.storeId);});
       S.todayOrders.push(Object.assign({},ro.data[0],{store_id:Number(ro.data[0].store_id),id:oid,items:items.map(function(i){return{product_name:i.product_name,quantity:i.quantity,unit:i.unit};})}));
     }
-    hideL();S.submitting=false;S.phase='success';render();
+    // 成功後：数量・メモをリセット、日付は維持して連続発注できるようにする
+    hideL();S.submitting=false;S.qty={};S.memo='';S.phase='success';render();
   }catch(err){
     hideL();S.submitting=false;if(btn)btn.disabled=false;
     toast('発注の送信に失敗しました。通信環境を確認してもう一度送信してください。（'+safeMsg(err)+'）',true);
@@ -1286,8 +1375,9 @@ async function doSub(){
 
 async function doNo(){
   if(S.submitting)return;S.submitting=true;showL('CKに連絡中…');
+  var od=getOrderDate();
   var st=getStore();
-  var pl={store_id:Number(S.storeId),store_name:st.name||('店舗'+S.storeId),order_date:jst.iso,status:'no_order',memo:'',is_late:false,created_by:st.manager_name||'店長'};
+  var pl={store_id:Number(S.storeId),store_name:st.name||('店舗'+S.storeId),order_date:od,status:'no_order',memo:'',is_late:false,created_by:st.manager_name||'店長'};
   try{
     if(!isReady){
       var d=Object.assign({id:Date.now()},pl,{created_at:new Date().toISOString(),items:[]});
