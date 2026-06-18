@@ -135,7 +135,9 @@ textarea.fi{resize:none;font-family:inherit;min-height:72px}
    Supabase → Settings → API から取得
 ======================================================== */
 var SB_URL = 'https://dlkilajbabzbmbpratnq.supabase.co'; // Project URL
-var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRsa2lsYWpiYWJ6Ym1icHJhdG5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5ODIxOTksImV4cCI6MjA5NjU1ODE5OX0.zUqBH_5Boh1_NL98HinpQ8lGIK9GAujvra-FdXRdzO4'; 
+var SB_KEY = '';  // anon public key（eyJ... または sb_publishable_...）
+
+/* ======== グローバル変数 ======== */
 var _url = '', _key = '', isReady = false;
 var STORES = [], CATS = [], PRODUCTS = [], PSV = {}; // PSV: {product_id(num): [store_id(num),...]}
 var autoTimer = null, dateTimer = null;
@@ -489,7 +491,8 @@ async function fetchToday(){
     var ids=orders.map(function(o){return o.id;}).join(',');
     var r2=await safeFetch(_url+'/rest/v1/order_items?select=*&order_id=in.('+ids+')',{method:'GET',headers:h});
     var items=(!r2.err&&r2.ok)?JSON.parse(r2.body||'[]'):[];
-    S.todayOrders=orders.map(function(o){
+    // order_dateが一致するものだけを表示（JS側二重チェック）
+    S.todayOrders=orders.filter(function(o){return o.order_date===today;}).map(function(o){
       return Object.assign({},o,{store_id:Number(o.store_id),id:Number(o.id),
         items:items.filter(function(i){return Number(i.order_id)===Number(o.id);})});
     });
@@ -545,7 +548,8 @@ function startAR(){
 /* ======== MANAGER画面 ======== */
 function vManager(){
   var st=getStore();
-  var my=S.todayOrders.find(function(o){return Number(o.store_id)===Number(S.storeId);});
+  // ホーム画面は常に「今日(jst.iso)」の自店舗の発注状況を表示する。order_date条件を必ず入れる
+  var my=S.todayOrders.find(function(o){return Number(o.store_id)===Number(S.storeId)&&o.order_date===jst.iso;});
   return'<div class="app">'+
   '<div class="bar"><i class="ti ti-truck-delivery" style="font-size:22px;color:var(--g)"></i>'+
   '<div style="flex:1"><div class="bar-t">'+esc(st.name)+'</div>'+
@@ -740,19 +744,22 @@ function changeCkDate(d){
   var has=S.todayOrders.some(function(o){return o.order_date===d;});
   if(!has&&isReady){
     showL('発注データを取得中…');
-    DB.from('orders').select('*').eq('order_date',d).order('created_at',{ascending:false}).then(function(r){
-      if(!r.error&&r.data&&r.data.length){
-        var ids=r.data.map(function(o){return o.id;});
-        DB.from('order_items').select('*').in('order_id',ids).then(function(r2){
-          var items=r2.data||[];
-          r.data.forEach(function(o){
-            if(!S.todayOrders.find(function(x){return Number(x.id)===Number(o.id);})){
-              S.todayOrders.push(Object.assign({},o,{store_id:Number(o.store_id),id:Number(o.id),items:items.filter(function(i){return Number(i.order_id)===Number(o.id);})}));
-            }
-          });
-          hideL();render();
+    var h={'Content-Type':'application/json','apikey':_key,'Authorization':'Bearer '+_key};
+    safeFetch(_url+'/rest/v1/orders?select=*&order_date=eq.'+d+'&order=created_at.desc',{method:'GET',headers:h}).then(function(r){
+      if(r.err||!r.ok){hideL();render();return;}
+      var orders=JSON.parse(r.body||'[]');
+      if(!Array.isArray(orders)||!orders.length){hideL();render();return;}
+      var ids=orders.map(function(o){return o.id;}).join(',');
+      safeFetch(_url+'/rest/v1/order_items?select=*&order_id=in.('+ids+')',{method:'GET',headers:h}).then(function(r2){
+        var items=(!r2.err&&r2.ok)?JSON.parse(r2.body||'[]'):[];
+        orders.forEach(function(o){
+          // order_dateが選択日と一致するものだけ追加（念のための二重チェック）
+          if(o.order_date===d&&!S.todayOrders.find(function(x){return Number(x.id)===Number(o.id);})){
+            S.todayOrders.push(Object.assign({},o,{store_id:Number(o.store_id),id:Number(o.id),items:items.filter(function(i){return Number(i.order_id)===Number(o.id);})}));
+          }
         });
-      }else{hideL();render();}
+        hideL();render();
+      });
     });
   }else{render();}
 }
@@ -786,7 +793,8 @@ function ckSt(sm){
     if(!list.length)return;
     h+='<div class="sl2" style="color:'+g.c+'">'+g.l+'</div><div class="card" style="margin-top:0">'+
     list.map(function(s){
-      var m=sMeta(sm[s.id]);var o=S.todayOrders.find(function(o){return Number(o.store_id)===Number(s.id);});
+      var m=sMeta(sm[s.id]);
+      var o=S.todayOrders.find(function(o){return Number(o.store_id)===Number(s.id)&&o.order_date===S.ckDate;});
       var t=o?new Date(o.created_at).toLocaleTimeString('ja-JP',{timeZone:'Asia/Tokyo',hour:'2-digit',minute:'2-digit'}):null;
       return'<div class="sr" onclick="S.detail='+s.id+';render()">'+
       '<div class="sd" style="background:'+m.d+'"></div>'+
@@ -848,7 +856,7 @@ function ckShFiltered(orders){
 function ckDet(sm){
   var sid=S.detail,st=STORES.find(function(x){return Number(x.id)===Number(sid);});
   var status=sm[Number(sid)]||'unconfirmed',m=sMeta(status);
-  var o=S.todayOrders.find(function(x){return Number(x.store_id)===Number(sid);});
+  var o=S.todayOrders.find(function(x){return Number(x.store_id)===Number(sid)&&x.order_date===S.ckDate;});
   var t=o?new Date(o.created_at).toLocaleTimeString('ja-JP',{timeZone:'Asia/Tokyo',hour:'2-digit',minute:'2-digit'}):null;
   return'<div style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:flex;align-items:flex-end" onclick="S.detail=null;render()">'+
   '<div style="background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:520px;margin:0 auto;max-height:85vh;overflow-y:auto;padding-bottom:calc(20px + var(--sb))" onclick="event.stopPropagation()">'+
@@ -1386,13 +1394,13 @@ async function doNo(){
   try{
     if(!isReady){
       var d=Object.assign({id:Date.now()},pl,{created_at:new Date().toISOString(),items:[]});
-      S.todayOrders=S.todayOrders.filter(function(o){return Number(o.store_id)!==Number(S.storeId);});
+      S.todayOrders=S.todayOrders.filter(function(o){return!(Number(o.store_id)===Number(S.storeId)&&o.order_date===od);});
       S.todayOrders.push(d);
     }else{
       var ro=await DB.from('orders').insert(pl).select('*');
       if(ro.error)throw new Error(safeMsg(ro.error));
       if(!ro.data||!ro.data.length)throw new Error('発注なしレコードの保存に失敗しました');
-      S.todayOrders=S.todayOrders.filter(function(o){return Number(o.store_id)!==Number(S.storeId);});
+      S.todayOrders=S.todayOrders.filter(function(o){return!(Number(o.store_id)===Number(S.storeId)&&o.order_date===od);});
       S.todayOrders.push(Object.assign({},ro.data[0],{store_id:Number(ro.data[0].store_id),items:[]}));
     }
     hideL();S.submitting=false;S.phase='noorder_done';render();
