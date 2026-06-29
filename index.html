@@ -433,6 +433,8 @@ async function doInlineConnect(){
   if(errEl)errEl.innerHTML='<div style="font-size:12px;color:#0F6E56">接続中…</div>';
   var r=await initSB(u,k);
   if(r.ok){
+    // 次回以降の自動接続のためにlocalStorageへ保存
+    try{localStorage.setItem('_sbk',k);}catch(_){}
     S.connErr='';render();
   }else{
     if(btn)btn.disabled=false;
@@ -1546,19 +1548,25 @@ function doCSV(){
 
 /* ======== 起動処理 ======== */
 (async function boot(){
-  // localStorageは使わない。SB_URLとSB_KEYのみ使用。
   var u=(SB_URL||'').replace(/[\s\r\n]/g,'');
+  // SB_KEYが空の場合はlocalStorageの保存済みキーを使う
   var k=(SB_KEY||'').replace(/[\s\r\n]/g,'');
+  if(!k){try{k=(localStorage.getItem('_sbk')||'').replace(/[\s\r\n]/g,'');}catch(_){}}
   startDW();
   if(u&&k){
     showL('接続中…');
     var r=await initSB(u,k);
     hideL();
-    S.connErr=r.ok?'':(r.msg||'接続失敗');
+    if(r.ok){
+      S.connErr='';
+    }else{
+      // 保存済みキーが無効になった場合はクリアして再入力を促す
+      try{localStorage.removeItem('_sbk');}catch(_){}
+      S.connErr=r.msg||'接続失敗';
+    }
   }else{
-    S.connErr='SB_KEYが設定されていません。\nindex.htmlの137行目にAnon Keyを貼り付けてVercelに再デプロイしてください。';
+    S.connErr='Supabase接続キーが設定されていません。\n下の入力欄にanon public keyを貼り付けて「接続する」を押してください。';
   }
-  // 接続成功・失敗に関わらず常にlogin画面を表示
   S.view='login';
   render();
 })();
