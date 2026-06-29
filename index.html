@@ -1384,12 +1384,24 @@ async function startEdit(orderId){
   S.phase='order';
   render();
 }
+/* 発注入力画面（phase==='order'）の中身だけを部分更新 → スクロール位置を保持 */
+function renderOrder(){
+  var con=document.querySelector('.con');
+  if(!con||S.phase!=='order'){render();return;}
+  // スクロール位置を退避
+  var scrollTop=con.scrollTop;
+  // .con の中身だけ書き換え
+  var inner=(!isReady?'<div class="al aw"><i class="ti ti-alert-triangle"></i><span>デモモード（発注はCKに届きません）</span></div>':'')+mOrder();
+  con.innerHTML=inner;
+  // スクロール位置を復元
+  con.scrollTop=scrollTop;
+}
 /* 備考欄の現在値をS.memoに退避（render前に呼ぶ） */
 function saveMemo(){var m=$('mi');if(m)S.memo=m.value;}
-function tCat(key){saveMemo();S.catOpen[key]=!S.catOpen[key];render();}
-function inc(id,mn){id=Number(id);mn=Number(mn)||1;saveMemo();S.qty[id]=Math.round(((S.qty[id]||0)+mn)*1000)/1000;render();}
-function dec(id,mn){id=Number(id);mn=Number(mn)||1;saveMemo();S.qty[id]=Math.max(0,Math.round(((S.qty[id]||0)-mn)*1000)/1000);render();}
-function setQ(id,v,mn){id=Number(id);mn=Number(mn)||1;saveMemo();var n=parseFloat(v)||0;S.qty[id]=Math.max(0,Math.round(n/mn)*mn);render();}
+function tCat(key){saveMemo();S.catOpen[key]=!S.catOpen[key];renderOrder();}
+function inc(id,mn){id=Number(id);mn=Number(mn)||1;saveMemo();S.qty[id]=Math.round(((S.qty[id]||0)+mn)*1000)/1000;renderOrder();}
+function dec(id,mn){id=Number(id);mn=Number(mn)||1;saveMemo();S.qty[id]=Math.max(0,Math.round(((S.qty[id]||0)-mn)*1000)/1000);renderOrder();}
+function setQ(id,v,mn){id=Number(id);mn=Number(mn)||1;saveMemo();var n=parseFloat(v)||0;S.qty[id]=Math.max(0,Math.round(n/mn)*mn);renderOrder();}
 function goC(){var m=$('mi');if(m)S.memo=m.value.trim();S.phase='confirm';render();}
 /* 次の日付の発注へ：翌日を選択して発注画面へ */
 function nextDateOrder(){
