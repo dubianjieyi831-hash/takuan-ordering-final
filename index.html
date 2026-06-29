@@ -391,14 +391,13 @@ function vLogin(){
 
   var connBanner='';
   if(!connOk){
-    // キー未設定・接続失敗 → インラインでキー入力フォームを表示
+    // キー未設定・接続失敗 → ログイン画面内に最小限のエラーと入力欄を表示
     connBanner=
-      '<div style="background:var(--rl);border:1px solid #F7C1C1;border-radius:var(--r8);padding:14px;margin-bottom:16px;max-width:380px;width:100%">'+
-      '<div style="font-size:14px;font-weight:600;color:#791F1F;margin-bottom:8px"><i class="ti ti-alert-circle"></i> Supabase未接続</div>'+
-      '<div style="font-size:12px;color:#791F1F;margin-bottom:10px;white-space:pre-wrap;line-height:1.7">'+esc(S.connErr||'SB_KEYが設定されていません')+'</div>'+
-      '<div style="font-size:12px;font-weight:600;color:#791F1F;margin-bottom:4px">Anon Public Keyを入力：</div>'+
-      '<textarea id="inline-key" rows="4" style="width:100%;padding:8px 10px;border:1.5px solid #F7C1C1;border-radius:6px;font-size:11px;font-family:monospace;color:#2C2C2A;background:#fff;outline:none;resize:none;line-height:1.5" placeholder="eyJhbGci... または sb_publishable_..." autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">'+esc((SB_KEY||'').replace(/[\s\r\n]/g,''))+'</textarea>'+
-      '<button onclick="doInlineConnect()" style="margin-top:8px;width:100%;padding:11px;background:#1D9E75;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer"><i class="ti ti-plug"></i> 接続する</button>'+
+      '<div style="background:var(--rl);border:1px solid #F7C1C1;border-radius:var(--r8);padding:14px;margin-bottom:16px;max-width:380px;width:100%)">'+
+      '<div style="font-size:14px;font-weight:600;color:#791F1F;margin-bottom:8px">Supabaseに接続できません。通信環境を確認してください。</div>'+
+      '<div style="font-size:12px;color:#791F1F;margin-bottom:10px;line-height:1.7">'+esc(S.connErr||'SB_KEYが設定されていません')+'</div>'+
+      '<textarea id="inline-key" rows="3" style="width:100%;padding:8px 10px;border:1.5px solid #F7C1C1;border-radius:6px;font-size:11px;font-family:monospace;color:#2C2C2A;background:#fff;outline:none;resize:none;line-height:1.5" placeholder="anon public key を貼り付けてください" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">'+esc((SB_KEY||'').replace(/[\s\r\n]/g,''))+'</textarea>'+
+      '<button onclick="doInlineConnect()" style="margin-top:8px;width:100%;padding:11px;background:#1D9E75;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer">接続する</button>'+
       '<div id="inline-err" style="min-height:4px;margin-top:6px"></div>'+
       '</div>';
   }else{
