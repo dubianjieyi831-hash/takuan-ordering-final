@@ -525,7 +525,12 @@ async function fetchHist(){
   if(!isReady){S.histOrders=[];return;}
   var h={'Content-Type':'application/json','apikey':_key,'Authorization':'Bearer '+_key};
   try{
-    var r=await safeFetch(_url+'/rest/v1/orders?select=*&order_date=lt.'+jst.iso+'&order=order_date.desc&limit=200',{method:'GET',headers:h});
+    // order_date基準で過去90日〜未来30日を取得（月またぎ・未来日付の発注を含む）
+    var d90=new Date();d90.setDate(d90.getDate()-90);
+    var d30=new Date();d30.setDate(d30.getDate()+30);
+    var fromDate=d90.toISOString().slice(0,10);
+    var toDate=d30.toISOString().slice(0,10);
+    var r=await safeFetch(_url+'/rest/v1/orders?select=*&order_date=gte.'+fromDate+'&order_date=lte.'+toDate+'&order=order_date.desc&limit=500',{method:'GET',headers:h});
     if(r.err||!r.ok){S.histOrders=[];return;}
     var orders=JSON.parse(r.body||'[]');
     if(!Array.isArray(orders)||!orders.length){S.histOrders=[];return;}
@@ -708,7 +713,8 @@ function mNoDone(){
   '<div style="padding:0 12px;margin-top:12px;margin-bottom:16px"><button class="btn bgy" onclick="go(\'home\')"><i class="ti ti-home"></i>ホームに戻る</button></div></div>';
 }
 function mHistList(){
-  var hist=S.adminOrders.filter(function(o){return Number(o.store_id)===Number(S.storeId)&&o.order_date<jst.iso;});
+  // order_dateで自店舗の発注を絞り込む（未来日付・月またぎも含む）
+  var hist=S.adminOrders.filter(function(o){return Number(o.store_id)===Number(S.storeId);});
   return'<div style="padding:12px 12px 8px;display:flex;align-items:center;gap:8px">'+
   '<button onclick="go(\'home\')" style="background:none;border:none;color:var(--g);cursor:pointer;font-size:14px;display:flex;align-items:center;gap:4px;padding:0"><i class="ti ti-arrow-left" style="font-size:18px"></i>ホームに戻る</button>'+
   '<div style="font-size:15px;font-weight:600;flex:1">過去の発注履歴</div></div>'+
@@ -733,8 +739,9 @@ function mHistList(){
 }
 function openHistory(){
   S.phase='history';
-  var t=jst.iso,mo=new Date();mo.setDate(mo.getDate()-90);
-  S.af={from:mo.toISOString().slice(0,10),to:t,sid:String(S.storeId||''),status:'',kw:''};
+  var mo=new Date();mo.setDate(mo.getDate()-90);
+  var fut=new Date();fut.setDate(fut.getDate()+30);
+  S.af={from:mo.toISOString().slice(0,10),to:fut.toISOString().slice(0,10),sid:String(S.storeId||''),status:'',kw:''};
   showL('履歴を読み込み中…');fetchAdmin().then(function(){hideL();render();});
 }
 
